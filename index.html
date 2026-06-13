@@ -3,753 +3,245 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>吸入リスク見積りツール（CREATE-SIMPLE手法・吸入のみ）</title>
+<title>あおい技術サービス事務所 — 化学物質管理・作業環境管理の実務ツール</title>
+<meta name="description" content="化学物質管理専門家・作業環境管理専門家による、現場で使える実務ツール集。化学物質のリスクアセスメントや作業環境管理の判断を支援します。" />
 <style>
   :root{
-    --bg:#eef0f3; --surface:#ffffff; --surface-2:#f7f8fa;
-    --ink:#19212e; --muted:#5d6675; --faint:#8b94a3;
+    --ink:#19212e; --bg:#eef0f3; --surface:#ffffff; --surface-2:#f7f8fa;
+    --muted:#5d6675; --faint:#8b94a3;
     --line:#d8dde4; --line-strong:#c3cad4;
-    --accent:#0e6b7a; --accent-ink:#0a4d58; --accent-bg:#e3f1f3;
-    --focus:#0e6b7a;
-    /* リスクレベル色（低→緑, 高→赤） */
-    --l1-bg:#d2ecd8; --l1-tx:#1d6b3e;
-    --l2a-bg:#eef0c2; --l2a-tx:#6c6010;
-    --l2b-bg:#f8e1bc; --l2b-tx:#8a5a12;
-    --l3-bg:#f7cca6; --l3-tx:#984512;
-    --l4-bg:#f2b3b3; --l4-tx:#8a2727;
-    --radius:10px;
+    --accent:#0e6b7a; --accent-ink:#0a4d58; --accent-bg:#e3f1f3; --accent-line:#bfe0e5;
     --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,"Liberation Mono",monospace;
     --sans:system-ui,-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",Meiryo,sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
-  body{font-family:var(--sans); color:var(--ink); background:var(--bg); line-height:1.6; -webkit-text-size-adjust:100%}
-  .wrap{max-width:1040px; margin:0 auto; padding:24px 18px 80px}
-  header.app{display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; border-bottom:2px solid var(--ink); padding-bottom:14px; margin-bottom:6px}
-  header.app h1{font-size:1.18rem; letter-spacing:.02em; margin:0; font-weight:700}
-  header.app .sub{color:var(--muted); font-size:.82rem; letter-spacing:.03em}
-  .lead{color:var(--muted); font-size:.86rem; margin:10px 0 8px; max-width:64ch}
-  .lead strong{color:var(--ink)}
+  body{font-family:var(--sans); color:var(--ink); background:var(--bg); line-height:1.7; -webkit-text-size-adjust:100%}
+  a{color:inherit}
+  .wrap{max-width:980px; margin:0 auto; padding:0 20px}
 
-  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
-  @media (max-width:720px){ .grid{grid-template-columns:1fr} }
-  section.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 16px 18px; margin-bottom:14px}
-  section.card > h2{font-size:.78rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin:0 0 14px; font-weight:700; display:flex; align-items:center; gap:8px}
-  section.card > h2::before{content:""; width:6px; height:6px; background:var(--accent); border-radius:50%}
-  .full{grid-column:1 / -1}
+  /* eyebrow / mono utility voice */
+  .eyebrow{font-family:var(--mono); font-size:.7rem; letter-spacing:.22em; text-transform:uppercase; color:var(--accent-ink)}
 
-  label.field{display:block; margin-bottom:13px}
-  label.field:last-child{margin-bottom:0}
-  .field > .lab{display:block; font-size:.8rem; font-weight:600; color:var(--ink); margin-bottom:5px}
-  .field > .hint, .hint{display:block; font-size:.72rem; color:var(--faint); margin-top:4px; line-height:1.45}
-  input[type=text], input[type=number], select{width:100%; font-family:var(--sans); font-size:.9rem; color:var(--ink); background:var(--surface); border:1px solid var(--line-strong); border-radius:8px; padding:9px 10px; appearance:none}
-  input:focus, select:focus, button:focus-visible{outline:2px solid var(--focus); outline-offset:1px}
-  select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%235d6675' stroke-width='1.6'/></svg>"); background-repeat:no-repeat; background-position:right 10px center; padding-right:30px}
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  /* ---- top bar ---- */
+  .topbar{display:flex; align-items:center; justify-content:space-between; padding:18px 0; border-bottom:1px solid var(--line)}
+  .brand{display:flex; align-items:center; gap:10px}
+  .brand .wordmark{font-family:var(--mono); font-size:.74rem; letter-spacing:.2em; color:var(--ink); font-weight:600}
+  .top-contact{font-size:.8rem; font-weight:600; color:var(--accent-ink); text-decoration:none; padding:7px 14px; border:1px solid var(--line-strong); border-radius:999px; transition:border-color .15s, background .15s}
+  .top-contact:hover{border-color:var(--accent); background:var(--accent-bg)}
 
-  .seg{display:inline-flex; background:var(--surface-2); border:1px solid var(--line-strong); border-radius:8px; padding:3px; gap:3px}
-  .seg button{font-family:var(--sans); font-size:.82rem; border:0; background:transparent; color:var(--muted); padding:6px 14px; border-radius:6px; cursor:pointer; font-weight:600}
-  .seg button[aria-pressed=true]{background:var(--accent); color:#fff}
+  /* ---- hero ---- */
+  .hero{padding:54px 0 6px}
+  .hero h1{font-size:clamp(1.9rem,5vw,2.9rem); font-weight:800; letter-spacing:-.01em; line-height:1.25; margin:0 0 14px}
+  .hero .tagline{font-size:clamp(1rem,2.2vw,1.18rem); font-weight:600; color:var(--ink); margin:0 0 14px; max-width:30ch}
+  .hero .intro{font-size:.92rem; color:var(--muted); max-width:60ch; margin:0}
 
-  .check{display:flex; gap:9px; align-items:flex-start; margin-bottom:11px; cursor:pointer}
-  .check input{margin-top:3px; width:16px; height:16px; flex:0 0 auto; accent-color:var(--accent)}
-  .check .ct{font-size:.84rem}
-  .check .cs{display:block; font-size:.72rem; color:var(--faint)}
+  /* signature: 計測スケール（リスクツールのRCRスケールバーと呼応）*/
+  .scale-rule{margin:30px 0 4px; opacity:.9}
+  .scale-svg{display:block; width:100%; height:26px}
+  @keyframes slidein{from{transform:translateX(-14px); opacity:0} to{transform:translateX(0); opacity:1}}
+  .scale-accent{animation:slidein .7s cubic-bezier(.2,.7,.2,1) both}
 
-  details.ghs{border:1px dashed var(--line-strong); border-radius:8px; padding:0 12px; background:var(--surface-2); margin-top:12px}
-  details.ghs summary{cursor:pointer; font-size:.8rem; font-weight:600; padding:11px 0; color:var(--accent-ink)}
-  details.ghs[open] summary{border-bottom:1px solid var(--line); margin-bottom:12px}
-  .ghs-grid{display:grid; grid-template-columns:1fr 1fr; gap:9px 14px; padding-bottom:14px}
-  @media (max-width:560px){ .ghs-grid{grid-template-columns:1fr} }
-  .ghs-grid .lab{font-size:.74rem}
+  /* ---- section frame ---- */
+  .section{padding:46px 0}
+  .section-head{display:flex; align-items:baseline; gap:14px; margin-bottom:22px}
+  .section-head h2{font-size:1.05rem; font-weight:700; letter-spacing:.02em; margin:0}
+  .section-head .count{font-family:var(--mono); font-size:.72rem; color:var(--faint)}
 
-  .dbsum{font-size:.8rem; background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:11px 12px}
-  .dbsum dl{display:grid; grid-template-columns:auto 1fr; gap:3px 12px; margin:0}
-  .dbsum dt{color:var(--muted); white-space:nowrap}
-  .dbsum dd{margin:0; font-family:var(--mono); font-size:.78rem}
-  .tag{display:inline-block; font-size:.68rem; font-family:var(--mono); letter-spacing:.04em; padding:2px 7px; border-radius:999px; background:var(--accent-bg); color:var(--accent-ink); border:1px solid #bfe0e5}
+  /* ---- tools grid ---- */
+  .tools{display:grid; grid-template-columns:repeat(2,1fr); gap:16px}
+  @media (max-width:680px){ .tools{grid-template-columns:1fr} }
 
-  .actions{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:4px}
-  button.primary{font-family:var(--sans); font-size:.92rem; font-weight:700; letter-spacing:.02em; background:var(--accent); color:#fff; border:0; border-radius:9px; padding:12px 22px; cursor:pointer}
-  button.primary:hover{background:var(--accent-ink)}
-  button.ghost{font-family:var(--sans); font-size:.86rem; font-weight:600; background:transparent; color:var(--accent-ink); border:1px solid var(--line-strong); border-radius:9px; padding:11px 18px; cursor:pointer}
-  button.ghost:hover{border-color:var(--accent); background:var(--accent-bg)}
-  .err{background:var(--l4-bg); border:1px solid #e9b7b7; color:#8a2b2b; border-radius:8px; padding:11px 13px; font-size:.84rem; margin-bottom:14px}
+  .tool-card{display:flex; flex-direction:column; background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden; text-decoration:none; color:inherit; transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease}
+  a.tool-card:hover{transform:translateY(-3px); box-shadow:0 10px 26px -14px rgba(20,40,60,.4); border-color:var(--accent-line)}
+  a.tool-card:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
-  /* ===== 結果 ===== */
-  #report{display:none}
-  #report.show{display:block}
-  .report-head{display:none}
-  .result-top{display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin:6px 0 14px}
-  .mode-label{font-size:.95rem; font-weight:700; letter-spacing:.02em}
-  .mode-label span{color:var(--accent-ink)}
+  .thumb{height:128px; background:var(--accent-bg); display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--line)}
+  .thumb svg.ti{width:96px; height:auto}
+  .tool-body{padding:16px 18px 18px; display:flex; flex-direction:column; flex:1}
+  .tool-cat{font-family:var(--mono); font-size:.64rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); margin-bottom:7px}
+  .tool-title{font-size:1.04rem; font-weight:700; margin:0 0 7px; line-height:1.4}
+  .tool-desc{font-size:.83rem; color:var(--muted); margin:0 0 16px; line-height:1.6; flex:1}
+  .tool-go{font-size:.84rem; font-weight:700; color:var(--accent-ink)}
+  .tool-soon{display:inline-block; font-family:var(--mono); font-size:.68rem; letter-spacing:.1em; color:var(--faint); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:3px 10px}
 
-  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:.72rem; color:var(--muted); margin:0 0 10px}
-  .legend .lk{display:inline-flex; align-items:center; gap:5px}
-  .legend .sw{width:13px; height:13px; border-radius:3px; display:inline-block}
-  .axisnote{font-size:.72rem; color:var(--faint); margin:0 0 14px; line-height:1.5}
+  /* 準備中カード */
+  .tool-card.is-soon{cursor:default}
+  .tool-card.is-soon .thumb{background:var(--surface-2)}
+  .tool-card.is-soon .thumb svg.ti [stroke]{stroke:#aab2bd}
+  .tool-card.is-soon .thumb svg.ti [fill]:not([fill="none"]){fill:#cfd5dd}
+  .tool-card.is-soon .tool-cat{color:var(--faint)}
 
-  .mtx{margin-bottom:18px}
-  .mtx-title{display:flex; align-items:baseline; gap:10px; margin-bottom:7px}
-  .mtx-title b{font-size:.9rem} .mtx-title span{font-size:.72rem; color:var(--muted)}
-  .mtx-scroll{overflow-x:auto; border:1px solid var(--line); border-radius:8px}
-  table.mtx-table{border-collapse:separate; border-spacing:0; width:100%; min-width:540px}
-  .mtx-table th, .mtx-table td{padding:0; text-align:center}
-  .mtx-table thead th{background:var(--surface-2); font-size:.72rem; font-weight:700; color:var(--ink); padding:7px 4px; border-bottom:1px solid var(--line-strong); line-height:1.2}
-  .mtx-table thead th span{display:block; font-size:.62rem; font-weight:400; color:var(--faint)}
-  .mtx-table th.corner{font-size:.66rem; color:var(--muted); position:sticky; left:0; z-index:3; background:var(--surface-2)}
-  .mtx-table th.rowh{font-size:.74rem; font-weight:700; padding:6px 8px; background:var(--surface-2); text-align:left; white-space:nowrap; position:sticky; left:0; z-index:2; border-right:1px solid var(--line-strong)}
-  .mtx-table th.rowh span{display:block; font-size:.62rem; font-weight:400; color:var(--faint)}
-  td.cell{border:2px solid #fff; min-width:74px; height:50px}
-  td.cell .cv{font-family:var(--mono); font-size:.76rem; font-weight:600; line-height:1.1}
-  td.cell .cv small{font-weight:400; font-size:.62rem; opacity:.8}
-  td.cell .cl{font-family:var(--mono); font-size:.86rem; font-weight:700; line-height:1.2}
-  td.cell.l1{background:var(--l1-bg); color:var(--l1-tx)}
-  td.cell.l2a{background:var(--l2a-bg); color:var(--l2a-tx)}
-  td.cell.l2b{background:var(--l2b-bg); color:var(--l2b-tx)}
-  td.cell.l3{background:var(--l3-bg); color:var(--l3-tx)}
-  td.cell.l4{background:var(--l4-bg); color:var(--l4-tx)}
-  td.cell.na{background:#f3f4f6; color:#b6bcc6; font-family:var(--mono)}
+  /* ---- contact ---- */
+  #contact{border-top:1px solid var(--line)}
+  .contact-card{background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:26px 24px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:18px}
+  .contact-text{max-width:48ch}
+  .contact-text h2{font-size:1.15rem; font-weight:700; margin:6px 0 8px}
+  .contact-text p{font-size:.88rem; color:var(--muted); margin:0}
+  .btn{display:inline-block; font-size:.92rem; font-weight:700; letter-spacing:.02em; background:var(--accent); color:#fff; text-decoration:none; padding:13px 24px; border-radius:10px; white-space:nowrap; transition:background .15s}
+  .btn:hover{background:var(--accent-ink)}
+  .btn:focus-visible{outline:2px solid var(--accent-ink); outline-offset:2px}
 
-  .collapse-note{font-size:.76rem; color:var(--accent-ink); background:var(--accent-bg); border:1px solid #bfe0e5; border-radius:7px; padding:9px 12px; margin-bottom:14px; line-height:1.5}
-  .vd4-note{font-size:.74rem; color:#8a5a12; background:#fdf3e2; border:1px solid #f0d3a6; border-radius:7px; padding:9px 12px; margin-bottom:14px; line-height:1.5}
+  /* ---- footer ---- */
+  footer{border-top:1px solid var(--line); margin-top:10px; padding:28px 0 50px}
+  footer .copy{font-size:.82rem; font-weight:600; color:var(--ink); margin-bottom:8px}
+  footer .note{font-size:.74rem; color:var(--faint); max-width:64ch; line-height:1.6; margin:0}
 
-  .summary-block{background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin-bottom:16px; font-size:.8rem}
-  .summary-block dl{display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:0}
-  .summary-block dt{color:var(--muted); white-space:nowrap}
-  .summary-block dd{margin:0}
-  .summary-block .mono{font-family:var(--mono)}
-
-  .flags{display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 0}
-  .flag{font-size:.74rem; padding:5px 10px; border-radius:7px; border:1px solid; line-height:1.3}
-  .flag.s{background:#fff4e6; border-color:#f0c48f; color:#8a5a12}
-  .flag.skin{background:#eef4ff; border-color:#bcd0f0; color:#2c4f8a}
-
-  .disclaimer{font-size:.74rem; color:var(--muted); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:6px; background:var(--surface-2); padding:12px 14px; margin-top:18px; line-height:1.55}
-  footer.note{font-size:.72rem; color:var(--faint); margin-top:26px; line-height:1.6}
-  footer.note a{color:var(--accent-ink)}
-
-  @media print{
-    @page{margin:12mm}
-    body{background:#fff}
-    .wrap{padding:0; max-width:none}
-    .no-print{display:none !important}
-    #report{display:block !important}
-    .report-head{display:block; border-bottom:2px solid #000; padding-bottom:8px; margin-bottom:14px}
-    .report-head h1{font-size:1.05rem; margin:0}
-    .report-head .m{font-size:.74rem; color:#444}
-    td.cell, .mtx-table thead th, .mtx-table th.rowh, .flag, .collapse-note, .vd4-note{-webkit-print-color-adjust:exact; print-color-adjust:exact}
-    .mtx, .summary-block{break-inside:avoid}
-    .mtx-scroll{overflow:visible}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <header class="app no-print">
-    <h1>吸入リスク見積りツール</h1>
-    <span class="sub">CREATE-SIMPLE 手法に基づく簡易リスクアセスメント（吸入のみ）</span>
+  <!-- ===== トップバー ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+        <path d="M12 2.2 L20.6 7.1 V16.9 L12 21.8 L3.4 16.9 V7.1 Z" fill="none" stroke="#0e6b7a" stroke-width="1.6"/>
+        <circle cx="12" cy="12" r="2.5" fill="#0e6b7a"/>
+      </svg>
+      <span class="wordmark">AOI&nbsp;TECHNICAL&nbsp;SERVICE</span>
+    </div>
+    <a class="top-contact" href="#contact">お問い合わせ</a>
   </header>
-  <p class="lead no-print">
-    SDS の濃度基準値・GHS 区分と取扱い条件から、吸入ばく露のリスクを<strong>取扱量 × 換気</strong>のマトリックスで見積もります。
-    濃度基準値がない物質は、入力したばく露限界値、または GHS 区分から判定した管理目標濃度で評価します。
-  </p>
-  <p class="lead no-print"><strong>本ツールは室温（約20℃）での取扱いを前提とします。</strong>加熱するなど室温以外で取り扱う場合は、揮発性レベルを実際の温度に合わせて引き上げて評価してください。</p>
 
-  <!-- ============ 入力 ============ -->
-  <div id="form" class="no-print">
+  <!-- ===== ヒーロー ===== -->
+  <section class="hero">
+    <h1>あおい技術サービス事務所</h1>
+    <p class="tagline">化学物質管理・作業環境管理の専門家による、現場で使える実務ツール。</p>
+    <p class="intro">SDS や GHS 区分をもとに、化学物質のリスクアセスメントや作業環境管理の判断を支援する簡易ツールを公開しています。化学物質管理専門家・作業環境管理専門家を営む個人事務所として作成・運用しています。</p>
 
-    <section class="card full">
-      <h2>1. 物質の特定</h2>
-      <div class="row2" style="align-items:end">
-        <div>
-          <span class="lab" style="font-size:.8rem;font-weight:600;display:block;margin-bottom:5px">入力方法</span>
-          <div class="seg" role="group" aria-label="入力方法">
-            <button type="button" id="modeCas" aria-pressed="true">CAS番号で検索</button>
-            <button type="button" id="modeManual" aria-pressed="false">GHS区分を手入力</button>
-          </div>
+    <div class="scale-rule" aria-hidden="true">
+      <svg class="scale-svg" preserveAspectRatio="none" viewBox="0 0 980 26" width="980" height="26">
+        <defs>
+          <pattern id="tickMinor" width="13" height="26" patternUnits="userSpaceOnUse">
+            <line x1="0.5" y1="15" x2="0.5" y2="23" stroke="#c3cad4" stroke-width="1"/>
+          </pattern>
+          <pattern id="tickMajor" width="65" height="26" patternUnits="userSpaceOnUse">
+            <line x1="0.5" y1="9" x2="0.5" y2="23" stroke="#8b94a3" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="980" height="26" fill="url(#tickMinor)"/>
+        <rect x="0" y="0" width="980" height="26" fill="url(#tickMajor)"/>
+        <line x1="0" y1="23" x2="980" y2="23" stroke="#19212e" stroke-width="1.4"/>
+        <g class="scale-accent">
+          <rect x="0" y="20.5" width="150" height="4" fill="#0e6b7a"/>
+          <path d="M150 13 l-6 0 l3 6 z" fill="#0e6b7a"/>
+        </g>
+      </svg>
+    </div>
+  </section>
+
+  <!-- ===== ツール ===== -->
+  <section class="section">
+    <div class="section-head">
+      <span class="eyebrow">Tools</span>
+      <h2>ツール</h2>
+    </div>
+
+    <div class="tools">
+
+      <!-- 公開中: 吸入リスクアセスメント -->
+      <a class="tool-card" href="riskassessment.html">
+        <div class="thumb">
+          <svg class="ti" viewBox="0 0 80 56" aria-hidden="true">
+            <path d="M33 11 h14" stroke="#0e6b7a" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M37 11 V24 L26 42 a4 4 0 0 0 3.5 6 h21 a4 4 0 0 0 3.5 -6 L43 24 V11" fill="none" stroke="#0e6b7a" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="M30 35 h20" stroke="#0e6b7a" stroke-width="2.2"/>
+            <circle cx="37" cy="41" r="1.6" fill="#0e6b7a"/>
+            <circle cx="44" cy="44" r="1.3" fill="#0e6b7a"/>
+            <path d="M39 8 q2.5 -3 0 -6 M45 8 q2.5 -3 0 -6" fill="none" stroke="#8b94a3" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
         </div>
-        <label class="field" style="margin:0">
-          <span class="lab">物質名・整理名（任意・レポート表示用）</span>
-          <input type="text" id="subName" placeholder="例：トルエン、製品A など" />
-        </label>
-      </div>
-
-      <div id="casBlock" style="margin-top:14px">
-        <div class="row2" style="align-items:end">
-          <label class="field" style="margin:0">
-            <span class="lab">CAS 番号</span>
-            <input type="text" id="casInput" placeholder="例：67-43-6" value="67-43-6" />
-            <span class="hint">ハイフン有無どちらでも可。データベースに登録された物質のみ検索できます。</span>
-          </label>
-          <button type="button" class="ghost" id="lookupBtn" style="margin-bottom:1px">データベースを検索</button>
+        <div class="tool-body">
+          <span class="tool-cat">リスクアセスメント</span>
+          <h3 class="tool-title">吸入ばく露リスクアセスメント</h3>
+          <p class="tool-desc">CREATE-SIMPLE の手法に基づき、取扱い条件から吸入リスクを「取扱量 × 換気」のマトリックスで見積もります。</p>
+          <span class="tool-go">開く →</span>
         </div>
-        <div id="dbResult" style="margin-top:12px"></div>
-        <div id="casPropWrap" style="display:none; margin-top:10px">
-          <label class="field" style="max-width:320px; margin:0">
-            <span class="lab">性状（この物質はデータベースに性状の登録がないため、選択してください）</span>
-            <select id="casProp">
-              <option value="1">液体</option>
-              <option value="2">粉体（固体）</option>
-            </select>
-          </label>
+      </a>
+
+      <!-- 準備中: 経皮リスクアセスメント -->
+      <div class="tool-card is-soon">
+        <div class="thumb">
+          <svg class="ti" viewBox="0 0 80 56" aria-hidden="true">
+            <path d="M40 10 C46 19 49 23 49 28 a9 9 0 0 1 -18 0 C31 23 34 19 40 10 Z" fill="none" stroke="#0e6b7a" stroke-width="2.4" stroke-linejoin="round"/>
+            <path d="M22 40 h36" stroke="#0e6b7a" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M30 44 v5 M40 44 v6 M50 44 v5" stroke="#0e6b7a" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="tool-body">
+          <span class="tool-cat">リスクアセスメント</span>
+          <h3 class="tool-title">経皮ばく露リスクアセスメント</h3>
+          <p class="tool-desc">皮膚からの吸収量とばく露限界値を比較し、経皮ばく露のリスクを見積もります。</p>
+          <span class="tool-soon">準備中</span>
         </div>
       </div>
 
-      <div id="manualBlock" style="margin-top:14px; display:none">
-        <label class="field" style="max-width:280px">
-          <span class="lab">性状</span>
-          <select id="mProperty">
-            <option value="1">液体</option>
-            <option value="2">粉体（固体）</option>
-          </select>
-          <span class="hint">常温で気体の物質は吸入評価の対象外です。</span>
-        </label>
-        <details class="ghs" id="ghsDetails">
-          <summary>GHS 区分を入力（管理目標濃度・リスクレベルSの判定に使用）</summary>
-          <div class="ghs-grid" id="ghsGrid"></div>
-        </details>
+      <!-- 準備中: 作業環境測定の評価 -->
+      <div class="tool-card is-soon">
+        <div class="thumb">
+          <svg class="ti" viewBox="0 0 80 56" aria-hidden="true">
+            <path d="M22 40 a18 18 0 0 1 36 0" fill="none" stroke="#0e6b7a" stroke-width="2.4" stroke-linecap="round"/>
+            <path d="M22 40 h4 M54 40 h4 M27 28 l2.5 3 M53 28 l-2.5 3 M40 22 v4" stroke="#0e6b7a" stroke-width="2" stroke-linecap="round"/>
+            <path d="M40 40 L50 30" stroke="#0e6b7a" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="40" cy="40" r="2.6" fill="#0e6b7a"/>
+          </svg>
+        </div>
+        <div class="tool-body">
+          <span class="tool-cat">作業環境管理</span>
+          <h3 class="tool-title">作業環境測定 結果の評価</h3>
+          <p class="tool-desc">測定結果の幾何平均・幾何標準偏差から、第1〜第3管理区分を判定します。</p>
+          <span class="tool-soon">準備中</span>
+        </div>
       </div>
-    </section>
 
-    <div class="grid">
-      <section class="card">
-        <h2>2. 揮発性 / 飛散性</h2>
-        <label class="field">
-          <span class="lab" id="volLab">揮発性レベル</span>
-          <select id="volSelect"></select>
-          <span class="hint" id="volHint"></span>
-        </label>
-      </section>
-
-      <section class="card">
-        <h2>3. 含有率・作業内容</h2>
-        <label class="field">
-          <span class="lab">含有率（%）</span>
-          <input type="number" id="conc" value="100" min="0" max="100" step="any" />
-          <span class="hint">25%以上→×1、5〜25%→×3/5、1〜5%→×1/5、1%未満→×1/10</span>
-        </label>
-        <label class="check">
-          <input type="checkbox" id="spray" />
-          <span class="ct">スプレー作業など空気中に飛散しやすい作業<span class="cs">補正係数 ×10（粉体塗装・研磨グラインダー等を含む）</span></span>
-        </label>
-        <label class="check">
-          <input type="checkbox" id="area" />
-          <span class="ct">塗布面積が 1m² 超 かつ 1日あたり 1L 以上を使用<span class="cs">補正係数 ×10（塗装・接着作業など）</span></span>
-        </label>
-      </section>
-    </div>
-
-    <section class="card full">
-      <h2>4. ばく露限界値（任意・上書き）</h2>
-      <p class="hint" style="margin:-4px 0 12px">
-        濃度基準値があればそれを優先します。濃度基準値がない物質で、許容濃度・TLV など独自の値を使う場合のみ入力してください（管理目標濃度より優先されます）。単位は性状で自動判定（液体／気体＝ppm、粉体＝mg/m³）。
-      </p>
-      <div class="row2" style="max-width:520px">
-        <label class="field">
-          <span class="lab">8時間 ばく露限界値 <span id="unit8" class="tag">ppm</span></span>
-          <input type="number" id="userOel8" placeholder="未入力" min="0" step="any" />
-        </label>
-        <label class="field">
-          <span class="lab">短時間 ばく露限界値 <span id="unitS" class="tag">ppm</span></span>
-          <input type="number" id="userOelS" placeholder="未入力" min="0" step="any" />
-        </label>
+      <!-- 準備中: 単位換算 -->
+      <div class="tool-card is-soon">
+        <div class="thumb">
+          <svg class="ti" viewBox="0 0 80 56" aria-hidden="true">
+            <rect x="14" y="18" width="22" height="20" rx="3" fill="none" stroke="#0e6b7a" stroke-width="2.2"/>
+            <rect x="44" y="18" width="22" height="20" rx="3" fill="none" stroke="#0e6b7a" stroke-width="2.2"/>
+            <text x="25" y="31.5" text-anchor="middle" font-size="8" font-family="monospace" fill="#0e6b7a">ppm</text>
+            <text x="55" y="31.5" text-anchor="middle" font-size="8" font-family="monospace" fill="#0e6b7a">mg</text>
+            <path d="M37.5 24 h5 M40.5 21.5 l2.5 2.5 l-2.5 2.5" fill="none" stroke="#0e6b7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M42.5 32 h-5 M39.5 29.5 l-2.5 2.5 l2.5 2.5" fill="none" stroke="#0e6b7a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="tool-body">
+          <span class="tool-cat">換算ツール</span>
+          <h3 class="tool-title">ばく露限界値の単位換算</h3>
+          <p class="tool-desc">分子量をもとに、ppm と mg/m³ を相互に換算します。</p>
+          <span class="tool-soon">準備中</span>
+        </div>
       </div>
-    </section>
 
-    <div id="errBox"></div>
-    <div class="actions">
-      <button type="button" class="primary" id="calcBtn">リスクを見積もる</button>
-      <button type="button" class="ghost" id="printBtn">PDFで保存（印刷）</button>
     </div>
-  </div>
+  </section>
 
-  <!-- ============ 結果 ============ -->
-  <div id="report">
-    <div class="report-head">
-      <h1>吸入リスクアセスメント結果</h1>
-      <div class="m" id="reportMeta"></div>
+  <!-- ===== お問い合わせ ===== -->
+  <section class="section" id="contact">
+    <div class="section-head">
+      <span class="eyebrow">Contact</span>
+      <h2>お問い合わせ</h2>
     </div>
-
-    <div class="result-top">
-      <div class="mode-label">評価：<span id="modeText">8時間ばく露</span></div>
-      <div class="seg no-print" role="group" aria-label="評価モード">
-        <button type="button" id="tg8" aria-pressed="true">8時間ばく露</button>
-        <button type="button" id="tgS" aria-pressed="false">短時間ばく露</button>
+    <div class="contact-card">
+      <div class="contact-text">
+        <p style="margin:0">化学物質管理・作業環境管理に関するご相談、ツールへのご要望やお気づきの点は、お問い合わせフォームからお寄せください。</p>
       </div>
+      <!-- ↓ Googleフォームの「送信」→リンクアイコンで取得したURLに置き換えてください -->
+      <a class="btn" href="https://forms.gle/your-form-id" target="_blank" rel="noopener">お問い合わせフォーム</a>
     </div>
+  </section>
 
-    <div class="summary-block" id="subSummary"></div>
-    <div id="flagsBox"></div>
-    <div id="vd4Note"></div>
-    <div id="collapseNote"></div>
-    <div class="legend" id="legend"></div>
-    <p class="axisnote">縦＝取扱量レベル／横＝換気レベル（D・E・F は制御風速確認済を前提）。各セル上段＝推定ばく露濃度の上限、下段＝リスクレベル。</p>
-    <div id="matrices"></div>
-
-    <div class="disclaimer">
-      本ツールは厚生労働省 CREATE-SIMPLE の手法（設計基準 ver.3.1）に基づく非公式の再実装です。厚生労働省が提供する公式ツールではありません。
-      室温（約20℃）での取扱いを前提とした簡易推定であり、加熱等の条件では揮発性レベルを変更する必要があります。結果は実際のばく露を保証するものではなく、重要な判断は公式の CREATE-SIMPLE や専門家の評価、必要に応じた実測で確認してください。
-    </div>
-  </div>
-
-  <footer class="note no-print">
-    手法の出典：厚生労働省 職場のあんぜんサイト「CREATE-SIMPLE」設計基準。本ツールは同手法に基づき独自に作成したもので、公式ツールではありません。<br>
-    濃度基準値は法令（告示）に基づく値を使用。許容濃度・ACGIH TLV・DFG MAK 等の第三者データは収録せず、利用者の入力に委ねています。
+  <!-- ===== フッター ===== -->
+  <footer>
+    <div class="copy">© 2026 あおい技術サービス事務所</div>
+    <p class="note">掲載のツールは簡易的な推定・支援を目的とした参考ツールです。最終的な判断は、公式手法や専門家による評価、必要に応じた実測でご確認ください。</p>
   </footer>
+
 </div>
-
-<!-- 化学物質データベース（convert_db.py で SubstanceList.xlsx から生成。index.html と同じ場所に配置） -->
-<script src="db.js"></script>
-<script>
-"use strict";
-
-/* =========================================================================
-   化学物質データベース（chemicalDB）は db.js で定義されています。
-   db.js は convert_db.py で SubstanceList.xlsx から生成し、index.html と同じ場所に置きます。
-   更新する場合は db.js のみを入れ替えてください。
-   ========================================================================= */
-if (typeof chemicalDB === "undefined") { window.chemicalDB = {}; }
-
-/* =========================================================================
-   計算エンジン（VBAロジックの移植）
-   ========================================================================= */
-function getUnit(pt){ return (pt===1||pt===3) ? "ppm" : "mg/m3"; }
-
-function normGHS(v){
-  if(v===null||v===undefined) return "-9999";
-  if(typeof v==="number"){ return isNaN(v) ? "-9999" : String(v); }
-  const s=String(v).trim(); return s==="" ? "-9999" : s;
-}
-function toPa(value, unit){
-  if(value===null||isNaN(value)) return 0;
-  const f={ "Pa":1,"kPa":1000,"hPa":100,"mPa":0.001,"mmHg":133.3,"Torr":133.3 }[unit];
-  return (f===undefined) ? 0 : value*f;
-}
-// 管理目標濃度の上限 ACRmax（図表5 / CalculateACRMax）
-function calcACRMax(g, pt){
-  const liq = (pt===1||pt===3);
-  const inhAbsent = (g.atInhGas==="-9999" || g.atInhVap==="-9999" || g.atInhDust==="-9999");
-  if( (g.atOral==="1" && inhAbsent) || g.atInhGas==="1"||g.atInhVap==="1"||g.atInhDust==="1" ||
-      g.muta==="1"||g.muta==="1A"||g.muta==="1B" || g.carc==="1"||g.carc==="1A"||g.carc==="1B" ){ return liq?0.05:0.001; }
-  if( (g.atOral==="2" && inhAbsent) || g.atInhGas==="2"||g.atInhVap==="2"||g.atInhDust==="2" ||
-      g.skinCorr==="1A"|| g.respSens==="1"||g.respSens==="1A"||g.respSens==="1B" ||
-      g.muta==="2"||g.muta==="2A"||g.muta==="2B"|| g.carc==="2"||g.carc==="2A"||g.carc==="2B"||
-      g.repr==="1A"||g.repr==="1B"||g.repr==="1"|| g.stotRe==="1" ){ return liq?0.5:0.01; }
-  if( (g.atOral==="3" && inhAbsent) || g.atInhGas==="3"||g.atInhVap==="3"||g.atInhDust==="3" ||
-      g.skinCorr==="1B"||g.skinCorr==="1C"||g.skinCorr==="1"|| g.eye==="1" ||
-      g.skinSens==="1"||g.skinSens==="1A"||g.skinSens==="1B" || g.repr==="2"|| g.stotSe==="1"|| g.stotRe==="2" ){ return liq?5:0.1; }
-  if( (g.atOral==="4" && inhAbsent) || g.atInhGas==="4"||g.atInhVap==="4"||g.atInhDust==="4" ||
-      g.skinCorr==="2"|| g.eye==="2"|| g.stotSe==="2"||g.stotSe==="3" ){ return liq?50:1; }
-  return liq?500:10;
-}
-function concCoeff(pct){ if(pct<=0) return null; if(pct>=25) return 1; if(pct>=5) return 0.6; if(pct>=1) return 0.2; return 0.1; }
-
-// 初期ばく露濃度範囲の上限（図表13・14）
-function initialBand(pt, vd, amt){
-  if(pt===1){
-    if(vd===1){ if(amt===1)return 5000; if(amt===2)return 500; if(amt===3||amt===4)return 50; if(amt===5)return 5; }
-    if(vd===2){ if(amt===1||amt===2)return 500; if(amt===3)return 50; if(amt===4||amt===5)return 5; }
-    if(vd===3){ if(amt===1||amt===2)return 50; if(amt===3||amt===4)return 5; if(amt===5)return 0.5; }
-    if(vd===4){ if(amt===1||amt===2)return 5; if(amt===3||amt===4)return 0.5; if(amt===5)return 0.05; }
-  } else if(pt===2){
-    if(vd===1){ if(amt===1)return 100; if(amt===2)return 10; if(amt===3)return 1; if(amt===4||amt===5)return 0.1; }
-    if(vd===2){ if(amt===1)return 100; if(amt===2)return 10; if(amt>=3)return 0.1; }
-    if(vd===3){ if(amt===1||amt===2)return 1; if(amt===3||amt===4)return 0.1; if(amt===5)return 0.01; }
-  }
-  return null;
-}
-// 有効数字の切り捨て（VBA: RoundDown(x, 2-Int(Log10(|x|)))、0方向へ切り捨て）
-function roundDown(x){
-  if(x===0) return 0;
-  const d = 2 - Math.floor(Math.log10(Math.abs(x)));
-  const f = Math.pow(10, d);
-  return Math.trunc(x*f)/f;
-}
-// 1セル分のばく露濃度（時間補正 timeC を明示指定）
-//   ① 設計基準準拠：極低揮発の換気免除は「極低揮発 かつ 大量 かつ スプレー無し」のA/B(>1)に限定
-function cellBands(pt, vd, amt, conc, spray, area, ventiBase, timeC, respSens, varCoeff, apf){
-  const init = initialBand(pt, vd, amt);
-  if(init===null) return null;
-  const tc = respSens ? 1 : timeC;                 // 呼吸器感作性は時間補正なし
-  let venti = ventiBase;
-  if(vd===4 && amt===1 && spray===1 && venti>1) venti=1;
-
-  let epMax = init * conc * spray * area * venti * tc * apf;
-  epMax = roundDown(epMax);
-  if(pt===1){ if(epMax<0.005) epMax=0.005; } else { if(epMax<0.001) epMax=0.001; }
-
-  let epShort;
-  if(vd===4 && spray===1){ epShort = epMax; }       // 極低揮発＋スプレー無し → 8時間と同一
-  else { epShort = init * conc * spray * area * venti * varCoeff * apf; }
-  if(pt===1){ if(epShort<0.005) epShort=0.005; } else { if(epShort<0.001) epShort=0.001; }
-  epShort = roundDown(epShort);
-
-  if(epMax>5000) epMax=5000;
-  if(epShort>5000) epShort=5000;
-  return { epMax, epShort };
-}
-// リスク判定（図表28・29）
-function risk8(ep, oel){ const rcr=ep/oel;
-  if(rcr>10) return "Ⅳ"; if(rcr>1) return "Ⅲ"; if(rcr>0.5) return "Ⅱ-B"; if(rcr>0.1) return "Ⅱ-A"; return "Ⅰ"; }
-function riskShort(ep, oel){ const rcr=ep/oel;
-  if(rcr>10) return "Ⅳ"; if(rcr>1) return "Ⅲ"; if(rcr>0.1) return "Ⅱ"; return "Ⅰ"; }
-// OEL選定（濃度基準値 → 入力値 → 管理目標濃度）
-function resolveOEL8(cs8, u){ if(cs8>0) return cs8; if(u>0) return u; return -9999; }
-function resolveOELShort(csS, cs8, uS, r8, acr){
-  if(csS>0) return csS; if(cs8>0) return cs8*3; if(uS>0) return uS; if(r8>0) return r8*3; if(acr>0) return acr*3; return -9999; }
-
-/* =========================================================================
-   アダプタ・揮発性判定
-   ========================================================================= */
-function num(v){ return (v===null||v===undefined||v===""||(typeof v==="number"&&isNaN(v))) ? null : Number(v); }
-function adaptRecord(r){
-  return {
-    cas:r["1___CAS RN"], name:r["3___日本語名称"]||r["2___Text"],
-    pt:num(r["72_物化性状__性状"]), bp:num(r["74_物化性状__沸点"]),
-    vp:toPa(num(r["79_物化性状_蒸気圧_値"]), r["80_物化性状__単位"]),
-    cs8ppm:num(r["44_濃度基準値_8時間_ppm"]), cs8mg:num(r["45_濃度基準値_8時間_mg/m3"]),
-    csSppm:num(r["46_濃度基準値_短時間_ppm"]), csSmg:num(r["47_濃度基準値_短時間_mg/m3"]),
-    ghs:{
-      atOral:normGHS(r["23___急性毒性（経口）"]), atInhGas:normGHS(r["25___急性毒性（吸入：ガス）"]),
-      atInhVap:normGHS(r["26___急性毒性（吸入：蒸気）"]), atInhDust:normGHS(r["27___急性毒性（吸入：粉塵、ミスト）"]),
-      skinCorr:normGHS(r["28___皮膚腐食性／刺激性"]), eye:normGHS(r["29___眼に対する重篤な損傷性／眼刺激性"]),
-      respSens:normGHS(r["30___呼吸器感作性"]), skinSens:normGHS(r["31___皮膚感作性"]),
-      muta:normGHS(r["32___生殖細胞変異原性"]), carc:normGHS(r["33___発がん性"]), repr:normGHS(r["34___生殖毒性"]),
-      stotSe:normGHS(r["35___特定標的臓器毒性（単回暴露）"]), stotRe:normGHS(r["36___特定標的臓器毒性（反復暴露）"]),
-      asp:normGHS(r["37___誤えん有害性"])
-    }
-  };
-}
-// 液体の揮発性をBP/VPから判定（CasSearch準拠：沸点バンド＋蒸気圧<0.5Paで極低揮発に上書き）
-function deriveVolatility(pt, bpC, vpPa){
-  if(pt!==1) return null;
-  let vd=null;
-  if(bpC!==null && !isNaN(bpC)){ if(bpC<50) vd=1; else if(bpC<=149) vd=2; else vd=3; }
-  if(vpPa!==null && !isNaN(vpPa) && vpPa>0 && vpPa<0.5) vd=4;
-  return vd;
-}
-function isRespSensitizer(g){ return (g.respSens==="1"||g.respSens==="1A"||g.respSens==="1B") ? 1 : 0; }
-function hasRiskLevelS(g){ return (g.skinCorr!=="-9999"||g.eye!=="-9999"||g.skinSens!=="-9999"); }
-function isSkinHazard(g){
-  return (g.skinCorr==="1A"||g.skinCorr==="1B"||g.skinCorr==="1C"||g.skinCorr==="1"
-    || g.eye==="1" || g.respSens==="1"||g.respSens==="1A"||g.respSens==="1B"
-    || g.skinSens==="1"||g.skinSens==="1A"||g.skinSens==="1B");
-}
-
-/* =========================================================================
-   UI 定数
-   ========================================================================= */
-const AMOUNTS = [
-  {v:1, t:"大量", sub:"1ton / 1kL〜"},
-  {v:2, t:"中量", sub:"1kg / 1L〜"},
-  {v:3, t:"少量", sub:"100g / 100mL〜"},
-  {v:4, t:"微量", sub:"10g / 10mL〜"},
-  {v:5, t:"極微量", sub:"〜10g / 10mL"}
-];
-const VENTS = [
-  {k:"A", c:4,     sub:"換気なし"},
-  {k:"B", c:3,     sub:"全体換気"},
-  {k:"C", c:1,     sub:"工業換気/屋外"},
-  {k:"D", c:0.1,   sub:"局排(外付)"},
-  {k:"E", c:0.01,  sub:"局排(囲い)"},
-  {k:"F", c:0.001, sub:"密閉"}
-];
-const TIMEPATTERNS = [
-  {tc:0.1, t:"臨時作業", sub:"週合計4時間以下 等（×0.1）"},
-  {tc:1,   t:"定常作業", sub:"標準（×1）"},
-  {tc:10,  t:"長時間作業", sub:"週40時間超 等（×10）"}
-];
-const SHORT_VAR = 6; // 短時間ばく露の変動係数（「大きい作業」で固定）
-
-const VOL_LIQUID = [
-  {v:1, t:"高揮発性（沸点 50℃ 未満）"},
-  {v:2, t:"中揮発性（沸点 50〜150℃）"},
-  {v:3, t:"低揮発性（沸点 150℃ 以上）"},
-  {v:4, t:"極低揮発性（蒸気圧 0.5Pa 未満）"}
-];
-const DUST_SOLID = [
-  {v:1, t:"高飛散性（微細な軽い粉体）"},
-  {v:2, t:"中飛散性（結晶状・顆粒状）"},
-  {v:3, t:"低飛散性（壊れないペレット）"}
-];
-const GHS_FIELDS = [
-  {k:"atOral",  l:"急性毒性（経口）",        o:["1","2","3","4","5"]},
-  {k:"atInhGas",l:"急性毒性（吸入：ガス）",   o:["1","2","3","4"]},
-  {k:"atInhVap",l:"急性毒性（吸入：蒸気）",   o:["1","2","3","4"]},
-  {k:"atInhDust",l:"急性毒性（吸入：粉塵/ミスト）",o:["1","2","3","4"]},
-  {k:"skinCorr",l:"皮膚腐食性／刺激性",       o:["1","1A","1B","1C","2"]},
-  {k:"eye",     l:"眼に対する重篤な損傷/刺激", o:["1","2"]},
-  {k:"respSens",l:"呼吸器感作性",            o:["1","1A","1B"]},
-  {k:"skinSens",l:"皮膚感作性",              o:["1","1A","1B"]},
-  {k:"muta",    l:"生殖細胞変異原性",         o:["1","1A","1B","2"]},
-  {k:"carc",    l:"発がん性",                o:["1","1A","1B","2"]},
-  {k:"repr",    l:"生殖毒性",                o:["1","1A","1B","2"]},
-  {k:"stotSe",  l:"特定標的臓器毒性（単回）",  o:["1","2","3"]},
-  {k:"stotRe",  l:"特定標的臓器毒性（反復）",  o:["1","2"]}
-];
-
-/* =========================================================================
-   UI
-   ========================================================================= */
-const $ = id => document.getElementById(id);
-let mode = "cas";          // "cas" | "manual"
-let lastRecord = null;
-let toggleMode = "8h";     // "8h" | "short"
-let current = null;        // 計算済みパラメータ
-
-function buildGhsGrid(){
-  $("ghsGrid").innerHTML = GHS_FIELDS.map(f=>{
-    const opts = ['<option value="-9999">該当なし</option>']
-      .concat(f.o.map(o=>`<option value="${o}">区分 ${o}</option>`)).join("");
-    return `<label class="field" style="margin:0"><span class="lab">${f.l}</span><select data-ghs="${f.k}">${opts}</select></label>`;
-  }).join("");
-}
-function readManualGhs(){
-  const g = {};
-  GHS_FIELDS.forEach(f=>{ g[f.k] = $("ghsGrid").querySelector(`[data-ghs="${f.k}"]`).value; });
-  g.asp="-9999";
-  return g;
-}
-function setVolatilityChoices(pt, autoVd){
-  const sel = $("volSelect");
-  const list = (pt===1)? VOL_LIQUID : DUST_SOLID;
-  $("volLab").textContent = (pt===1)? "揮発性レベル" : "飛散性レベル";
-  $("volHint").textContent = (pt===1)
-    ? "沸点・蒸気圧から自動判定します。加熱など室温以外で扱う場合は、実際の温度に合わせて引き上げてください。"
-    : "粉体の形状から選択してください。";
-  sel.innerHTML = list.map(x=>`<option value="${x.v}">${x.t}</option>`).join("");
-  if(autoVd){ sel.value = String(autoVd); }
-}
-function setUnits(pt){ const u=getUnit(pt); $("unit8").textContent=u; $("unitS").textContent=u; }
-
-function switchMode(m){
-  mode = m;
-  $("modeCas").setAttribute("aria-pressed", m==="cas");
-  $("modeManual").setAttribute("aria-pressed", m==="manual");
-  $("casBlock").style.display = (m==="cas")? "block":"none";
-  $("manualBlock").style.display = (m==="manual")? "block":"none";
-  if(m==="manual"){
-    const pt = Number($("mProperty").value); setVolatilityChoices(pt, null); setUnits(pt);
-  } else if(lastRecord){
-    applyRecordToForm(lastRecord);
-  }
-}
-function lookup(){
-  const key = $("casInput").value.replace(/[-\s]/g,"");
-  const rec = chemicalDB[key];
-  if(!rec){
-    lastRecord=null;
-    $("dbResult").innerHTML = `<div class="err">CAS番号「${$("casInput").value}」はデータベースに見つかりませんでした。「GHS区分を手入力」に切り替えるか、CAS番号をご確認ください。</div>`;
-    return false;
-  }
-  lastRecord = rec; applyRecordToForm(rec); return true;
-}
-function applyRecordToForm(rec){
-  const a = adaptRecord(rec);
-  if(!$("subName").value) $("subName").value = a.name||"";
-  // 性状未登録（1/2/3以外）の場合はユーザーに選択させる
-  const propMissing = (a.pt!==1 && a.pt!==2 && a.pt!==3);
-  $("casPropWrap").style.display = propMissing ? "block" : "none";
-  const pt = propMissing ? Number($("casProp").value) : a.pt;
-  setUnits(pt);
-  if(pt===3){
-    $("dbResult").innerHTML = `<div class="err">この物質は常温で気体（性状＝気体）です。CREATE-SIMPLE の吸入評価は気体に対応していません。</div>`;
-    return;
-  }
-  const autoVd = deriveVolatility(pt, a.bp, a.vp);
-  setVolatilityChoices(pt, autoVd);
-  const u = getUnit(pt);
-  const cs8 = (pt===2)? a.cs8mg : a.cs8ppm;
-  const csS = (pt===2)? a.csSmg : a.csSppm;
-  const acr = calcACRMax(a.ghs, pt);
-  const volName = autoVd ? ((pt===1?VOL_LIQUID:DUST_SOLID).find(x=>x.v===autoVd)||{}).t : (pt===1?"（沸点情報なし・要選択）":"（要選択）");
-  $("dbResult").innerHTML = `<div class="dbsum"><dl>
-    <dt>物質名</dt><dd>${a.name||"—"}</dd>
-    <dt>性状</dt><dd>${pt===1?"液体":"粉体（固体）"}</dd>
-    <dt>沸点 / 蒸気圧</dt><dd>${a.bp!=null?a.bp+" ℃":"—"} / ${a.vp?a.vp.toPrecision(3)+" Pa":"—"}</dd>
-    <dt>揮発性${pt===1?"（自動）":""}</dt><dd>${volName}</dd>
-    <dt>濃度基準値(8h)</dt><dd>${cs8!=null?cs8+" "+u:"設定なし"}</dd>
-    <dt>濃度基準値(短時間)</dt><dd>${csS!=null?csS+" "+u:"設定なし"}</dd>
-    <dt>管理目標濃度</dt><dd>${acr+" "+u} <span class="tag">GHS区分から判定</span></dd>
-  </dl></div>`;
-}
-function showError(msg){ $("errBox").innerHTML = `<div class="err">${msg}</div>`; $("report").classList.remove("show"); }
-function clearError(){ $("errBox").innerHTML=""; }
-
-function fmt(x){
-  if(x==null||isNaN(x)||x===Infinity) return "—";
-  if(x>=1000) return String(Math.round(x));
-  if(x>=1) return String(Math.round(x*100)/100);
-  return Number(x.toPrecision(2)).toString();
-}
-function lvClass(lv){
-  if(lv==="Ⅳ") return "l4"; if(lv==="Ⅲ") return "l3";
-  if(lv==="Ⅱ-B") return "l2b"; if(lv==="Ⅱ-A") return "l2a"; if(lv==="Ⅱ") return "l2b";
-  return "l1";
-}
-function rlText(lv){
-  return {"Ⅳ":"大きなリスク","Ⅲ":"中程度のリスク","Ⅱ-B":"懸念されるリスク","Ⅱ-A":"小さなリスク","Ⅱ":"小さなリスク","Ⅰ":"些細なリスク"}[lv]||"";
-}
-
-/* ---- 計算 ---- */
-function calculate(){
-  clearError();
-  let pt, ghs, cs8=null, csS=null, name=$("subName").value.trim();
-
-  if(mode==="cas"){
-    if(!lastRecord){ showError("先に「データベースを検索」で物質を選択してください。"); return; }
-    const a = adaptRecord(lastRecord);
-    pt = (a.pt!==1 && a.pt!==2 && a.pt!==3) ? Number($("casProp").value) : a.pt;
-    if(pt===3){ showError("気体は吸入評価の対象外です。"); return; }
-    ghs = a.ghs;
-    if(!name) name = a.name||"";
-    cs8 = (pt===2)? a.cs8mg : a.cs8ppm;
-    csS = (pt===2)? a.csSmg : a.csSppm;
-  } else {
-    pt = Number($("mProperty").value);
-    ghs = readManualGhs();
-  }
-
-  const vd = Number($("volSelect").value);
-  if(!vd){ showError("揮発性／飛散性レベルを選択してください。"); return; }
-  const cc = concCoeff(Number($("conc").value));
-  if(cc===null){ showError("含有率は 0 より大きい値を入力してください。"); return; }
-  const spray = $("spray").checked ? 10 : 1;
-  const area  = $("area").checked ? 10 : 1;
-
-  const userOel8 = num($("userOel8").value);
-  const userOelS = num($("userOelS").value);
-  const acr  = calcACRMax(ghs, pt);
-  const oel8 = resolveOEL8(cs8, userOel8);
-  const eval8 = (oel8>0)? oel8 : acr;
-  const oelShort = resolveOELShort(csS, cs8, userOelS, oel8, acr);
-  const respSens = isRespSensitizer(ghs);
-
-  const src8 = (cs8>0)? "濃度基準値（8時間）" : (userOel8>0)? "入力したばく露限界値（8時間）" : "管理目標濃度（GHS区分から判定）";
-  const srcS = (csS>0)? "短時間濃度基準値"
-             : (cs8>0)? "8時間濃度基準値 ×3"
-             : (userOelS>0)? "入力した短時間ばく露限界値"
-             : (oel8>0)? "8時間ばく露限界値 ×3"
-             : "管理目標濃度 ×3";
-
-  current = { pt, vd, conc:cc, spray, area, eval8, oelShort, acr, respSens, src8, srcS, name, ghs };
-
-  $("report").classList.add("show");
-  renderAll();
-  $("report").scrollIntoView({behavior:"smooth", block:"start"});
-}
-
-/* ---- マトリックス生成 ---- */
-function buildGrid(timeC){
-  const c = current, mode8 = (toggleMode==="8h");
-  const oel = mode8 ? c.eval8 : c.oelShort;
-  return AMOUNTS.map(a=> VENTS.map(v=>{
-    const b = cellBands(c.pt, c.vd, a.v, c.conc, c.spray, c.area, v.c, timeC, c.respSens, SHORT_VAR, 1);
-    if(!b) return null;
-    const val = mode8 ? b.epMax : b.epShort;
-    const lv  = mode8 ? risk8(val, oel) : riskShort(val, oel);
-    return { val, lv };
-  }));
-}
-function gridKey(g){ return g.map(row=>row.map(c=> c? c.val+"|"+c.lv : "x").join(",")).join(";"); }
-
-function renderOneMatrix(grid, tp){
-  const u = getUnit(current.pt);
-  const head = tp
-    ? `<div class="mtx-title"><b>${tp.t}</b><span>${tp.sub}</span></div>`
-    : `<div class="mtx-title"><b>推定ばく露濃度・リスクレベル</b></div>`;
-  const cols = VENTS.map(v=>`<th>${v.k}<span>${v.sub}</span></th>`).join("");
-  const rows = grid.map((row,i)=>{
-    const a = AMOUNTS[i];
-    const cells = row.map(c=> c
-      ? `<td class="cell ${lvClass(c.lv)}"><div class="cv">${fmt(c.val)}<small> ${u}</small></div><div class="cl">${c.lv}</div></td>`
-      : `<td class="cell na">—</td>`).join("");
-    return `<tr><th class="rowh">${a.t}<span>${a.sub}</span></th>${cells}</tr>`;
-  }).join("");
-  return `<div class="mtx">${head}<div class="mtx-scroll"><table class="mtx-table">
-    <thead><tr><th class="corner">取扱量＼換気</th>${cols}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
-}
-
-function renderAll(){
-  const c = current, mode8 = (toggleMode==="8h"), u = getUnit(c.pt);
-
-  // トグル/ラベル
-  $("modeText").textContent = mode8 ? "8時間ばく露" : "短時間ばく露";
-  $("tg8").setAttribute("aria-pressed", mode8); $("tgS").setAttribute("aria-pressed", !mode8);
-
-  // 物質サマリ
-  const volName = ((c.pt===1?VOL_LIQUID:DUST_SOLID).find(x=>x.v===c.vd)||{}).t || "—";
-  const oel = mode8 ? c.eval8 : c.oelShort;
-  const src = mode8 ? c.src8 : c.srcS;
-  $("subSummary").innerHTML = `<dl>
-    <dt>物質</dt><dd>${c.name||"（無名）"}</dd>
-    <dt>性状 / ${c.pt===1?"揮発性":"飛散性"}</dt><dd>${c.pt===1?"液体":"粉体"} ／ ${volName}</dd>
-    <dt>含有率補正</dt><dd class="mono">×${c.conc}</dd>
-    <dt>作業内容</dt><dd>${c.spray>1?"飛散しやすい作業 (×10) ":""}${c.area>1?"塗布面積1m²超 (×10) ":""}${(c.spray===1&&c.area===1)?"特になし":""}</dd>
-    <dt>評価基準値</dt><dd class="mono">${fmt(oel)} ${u}（${src}）</dd>
-    <dt>管理目標濃度</dt><dd class="mono">${fmt(c.acr)} ${u}</dd>
-    <dt>短時間変動係数</dt><dd class="mono">×${SHORT_VAR}（大きい作業で固定）</dd>
-  </dl>`;
-
-  // フラグ
-  let flags = "";
-  if(hasRiskLevelS(c.ghs)) flags += `<span class="flag s">リスクレベル S：皮膚・眼への有害性あり</span>`;
-  if(isSkinHazard(c.ghs))  flags += `<span class="flag skin">皮膚等障害化学物質に該当の可能性（保護手袋・保護眼鏡を検討）</span>`;
-  $("flagsBox").innerHTML = flags ? `<div class="flags">${flags}</div>` : "";
-
-  // 極低揮発の注記
-  $("vd4Note").innerHTML = (c.vd===4)
-    ? `<div class="vd4-note">極低揮発性物質では、大量取扱い かつ スプレー作業なし の場合のみ、換気 A・B の補正を適用しません（飽和蒸気濃度を基準とするため／設計基準）。このため大量の列が中量より低くなることがあります。</div>`
-    : "";
-
-  // マトリックス（3枚→同一なら1枚に畳む）
-  const grids = TIMEPATTERNS.map(tp=>({tp, grid:buildGrid(tp.tc)}));
-  const keys = grids.map(g=>gridKey(g.grid));
-  const same = (keys[0]===keys[1] && keys[1]===keys[2]);
-
-  let note = "";
-  if(same){
-    if(mode8 && c.respSens) note = "この物質は呼吸器感作性に区分されるため、作業時間・頻度による補正を行いません（設計基準）。作業パターンによらず同じ結果になります。";
-    else if(!mode8)         note = "短時間（15分）ばく露は作業時間・頻度の補正を受けないため、作業パターンによらず1つの表になります。";
-    else                    note = "作業時間補正による差がないため、1つの表にまとめています。";
-  } else if(!mode8){
-    note = "極低揮発性かつスプレー作業なしのため、短時間ばく露は8時間値（作業時間補正あり）と同じ値になります。";
-  }
-  $("collapseNote").innerHTML = note ? `<div class="collapse-note">${note}</div>` : "";
-
-  $("matrices").innerHTML = same
-    ? renderOneMatrix(grids[1].grid, null)
-    : grids.map(g=>renderOneMatrix(g.grid, g.tp)).join("");
-
-  // 凡例
-  const lk = mode8
-    ? [["l1","Ⅰ 些細"],["l2a","Ⅱ-A 小さい"],["l2b","Ⅱ-B 懸念"],["l3","Ⅲ 中程度"],["l4","Ⅳ 大きい"]]
-    : [["l1","Ⅰ 些細"],["l2b","Ⅱ 小さい"],["l3","Ⅲ 中程度"],["l4","Ⅳ 大きい"]];
-  $("legend").innerHTML = lk.map(x=>`<span class="lk"><span class="sw" style="background:var(--${x[0]}-bg);border:1px solid var(--${x[0]}-tx)"></span>${x[1]}</span>`).join("");
-
-  $("reportMeta").textContent = `物質：${c.name||"（無名）"}　／　評価：${mode8?"8時間ばく露":"短時間ばく露"}　／　作成日：${new Date().toLocaleDateString("ja-JP")}`;
-}
-
-/* ---- トグル ---- */
-function setToggle(m){ toggleMode = m; if(current) renderAll(); else { $("tg8").setAttribute("aria-pressed", m==="8h"); $("tgS").setAttribute("aria-pressed", m==="short"); } }
-
-/* ---- イベント ---- */
-$("modeCas").addEventListener("click", ()=>switchMode("cas"));
-$("modeManual").addEventListener("click", ()=>switchMode("manual"));
-$("lookupBtn").addEventListener("click", lookup);
-$("casInput").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); lookup(); } });
-$("mProperty").addEventListener("change", ()=>{ const pt=Number($("mProperty").value); setVolatilityChoices(pt,null); setUnits(pt); });
-$("casProp").addEventListener("change", ()=>{ if(lastRecord) applyRecordToForm(lastRecord); });
-$("calcBtn").addEventListener("click", calculate);
-$("printBtn").addEventListener("click", ()=>window.print());
-$("tg8").addEventListener("click", ()=>setToggle("8h"));
-$("tgS").addEventListener("click", ()=>setToggle("short"));
-
-/* ---- 初期化 ---- */
-buildGhsGrid();
-if(lookup()) calculate();   // 既定サンプルで初期表示
-</script>
 </body>
 </html>
