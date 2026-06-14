@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>化学防護手袋 素材選定ツール（耐透過性マトリックス）</title>
+<style>
+  :root{
+    --bg:#eef0f3; --surface:#ffffff; --surface-2:#f7f8fa;
+    --ink:#19212e; --muted:#5d6675; --faint:#8b94a3;
+    --line:#d8dde4; --line-strong:#c3cad4;
+    --accent:#0e6b7a; --accent-ink:#0a4d58; --accent-bg:#e3f1f3;
+    --focus:#0e6b7a;
+    /* 記号色（◎緑 / ○黄 / △橙 / ×赤） */
+    --ok3-bg:#d6ecdd; --ok3-ink:#1f7a44;
+    --ok2-bg:#fbf0c4; --ok2-ink:#897000;
+    --ok1-bg:#ffe1c4; --ok1-ink:#b85c0a;
+    --x-bg:#f7d7d3;  --x-ink:#b3261e; --x-sub:#8c4a44;
+    --warn:#b06a00;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+    line-height:1.6; font-size:15px; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:26px 18px 60px}
+
+  header.app{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+  header.app h1{font-size:1.32rem; margin:0; letter-spacing:.01em}
+  header.app .sub{font-size:.82rem; color:var(--muted)}
+  p.lead{margin:8px 0 22px; color:var(--muted); font-size:.9rem; max-width:780px}
+
+  section.card{
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:18px 18px 20px; margin-bottom:16px;
+  }
+  section.card > h2{
+    font-size:.96rem; margin:0 0 4px; display:flex; align-items:center; gap:8px;
+  }
+  .step-no{
+    display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%;
+    background:var(--accent); color:#fff; font-size:.74rem; font-weight:700; flex:none;
+  }
+  .card-hint{font-size:.78rem; color:var(--muted); margin:2px 0 14px}
+
+  /* ===== CAS 入力 ===== */
+  .cas-list{display:flex; flex-direction:column; gap:7px}
+  .cas-row{display:flex; align-items:center; gap:9px}
+  .cas-no{width:22px; text-align:right; color:var(--faint); font-size:.8rem; font-variant-numeric:tabular-nums; flex:none}
+  .cas-input{
+    width:150px; flex:none; padding:7px 9px; border:1px solid var(--line-strong); border-radius:7px;
+    font-size:.86rem; font-family:inherit; background:var(--surface);
+  }
+  .cas-name{font-size:.82rem; color:var(--ink); flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .cas-name.miss{color:var(--warn)}
+  .cas-name.muted{color:var(--faint)}
+  .cas-del{
+    flex:none; width:26px; height:26px; border:1px solid var(--line); border-radius:6px; background:var(--surface-2);
+    color:var(--muted); cursor:pointer; font-size:.95rem; line-height:1;
+  }
+  .cas-del:hover{background:#efe2e1; color:var(--x-ink); border-color:#e3c4c0}
+  .add-row{
+    margin-top:11px; padding:7px 12px; border:1px dashed var(--line-strong); border-radius:7px;
+    background:var(--surface-2); color:var(--accent-ink); font-size:.82rem; font-weight:600; cursor:pointer;
+  }
+  .add-row:disabled{opacity:.45; cursor:not-allowed}
+
+  /* ===== 選択（作業分類 / 作業時間） ===== */
+  .cat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+  .opt{
+    border:1px solid var(--line-strong); border-radius:9px; padding:11px 12px; cursor:pointer; background:var(--surface);
+    display:block; transition:border-color .12s, background .12s, box-shadow .12s;
+  }
+  .opt input{position:absolute; opacity:0; pointer-events:none}
+  .opt .opt-t{font-size:.86rem; font-weight:700; color:var(--ink)}
+  .opt .opt-d{font-size:.74rem; color:var(--muted); margin-top:4px; line-height:1.45}
+  .opt:hover{border-color:var(--accent)}
+  .opt.sel{border-color:var(--accent); background:var(--accent-bg); box-shadow:inset 0 0 0 1px var(--accent)}
+
+  .time-row{display:flex; gap:9px; flex-wrap:wrap}
+  .opt.time{flex:1 1 150px; text-align:center}
+
+  /* ===== ボタン / エラー ===== */
+  .actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px}
+  button.primary,button.ghost{
+    font-family:inherit; font-size:.9rem; font-weight:600; padding:11px 20px; border-radius:8px; cursor:pointer; border:1px solid transparent;
+  }
+  button.primary{background:var(--accent); color:#fff}
+  button.primary:hover{background:var(--accent-ink)}
+  button.ghost{background:var(--surface); color:var(--accent-ink); border-color:var(--line-strong)}
+  button.ghost:hover{background:var(--surface-2)}
+  #errBox{margin:4px 0 0}
+  .err{
+    background:#fcebe9; border:1px solid #f0c4be; color:#9a2a20; border-radius:8px; padding:10px 13px; font-size:.84rem;
+  }
+
+  :focus-visible{outline:2px solid var(--focus); outline-offset:2px}
+
+  /* ===== 結果 ===== */
+  #report{display:none; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:20px 18px 22px; margin-top:22px}
+  #report h2.r-title{font-size:1.06rem; margin:0 0 2px}
+  .r-meta{font-size:.76rem; color:var(--faint); margin-bottom:14px}
+  .cond{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px}
+  .cond .chip{
+    font-size:.8rem; background:var(--accent-bg); color:var(--accent-ink); border:1px solid #bfe0e4;
+    border-radius:999px; padding:4px 12px; font-weight:600;
+  }
+  .miss-note{
+    font-size:.8rem; background:#fff6e6; border:1px solid #f0dcae; color:#7a5500; border-radius:8px;
+    padding:9px 13px; margin-bottom:14px;
+  }
+
+  .legend{display:flex; flex-wrap:wrap; gap:7px 14px; margin:0 0 12px; font-size:.76rem; color:var(--muted)}
+  .legend .lg{display:inline-flex; align-items:center; gap:6px}
+  .lg .swatch{width:20px; height:20px; border-radius:5px; display:grid; place-items:center; font-weight:700; font-size:.82rem; border:1px solid rgba(0,0,0,.06)}
+  .sw3{background:var(--ok3-bg); color:var(--ok3-ink)}
+  .sw2{background:var(--ok2-bg); color:var(--ok2-ink)}
+  .sw1{background:var(--ok1-bg); color:var(--ok1-ink)}
+  .swx{background:var(--x-bg); color:var(--x-ink)}
+  .legend-note{font-size:.74rem; color:var(--faint); margin:-4px 0 12px}
+
+  .scroll-hint{font-size:.74rem; color:var(--faint); margin:0 0 6px; display:none}
+
+  .matrix-wrap{overflow:auto; max-height:72vh; border:1px solid var(--line-strong); border-radius:9px; -webkit-overflow-scrolling:touch}
+  table.matrix{border-collapse:separate; border-spacing:0; font-size:.78rem; width:max-content}
+  .matrix th,.matrix td{border-right:1px solid var(--line); border-bottom:1px solid var(--line)}
+  .matrix thead th{
+    position:sticky; top:0; z-index:2; background:var(--accent); color:#fff; font-weight:600;
+    padding:7px 5px; width:62px; min-width:62px; max-width:62px; vertical-align:bottom; line-height:1.28;
+    word-break:break-word; font-size:.7rem; text-align:center;
+  }
+  .matrix thead th.corner{
+    left:0; top:0; z-index:4; background:var(--accent-ink); width:172px; min-width:172px; max-width:172px;
+    text-align:left; vertical-align:bottom; font-size:.74rem; padding:7px 10px;
+  }
+  .matrix tbody th.rowhead{
+    position:sticky; left:0; z-index:1; background:var(--surface); text-align:left; font-weight:600;
+    padding:7px 10px; width:172px; min-width:172px; max-width:172px; line-height:1.3;
+  }
+  .rowhead .rh-name{font-size:.8rem; color:var(--ink); display:block; word-break:break-word}
+  .rowhead .rh-cas{font-size:.7rem; color:var(--faint); font-variant-numeric:tabular-nums}
+  .matrix tbody tr:nth-child(even) th.rowhead{background:#fbfcfd}
+
+  .matrix td.cell{padding:0; text-align:center; vertical-align:middle; height:46px}
+  .cell .cc{display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:1px}
+  .cell .sym{font-size:1.02rem; font-weight:700; line-height:1}
+  .cell .ndi{font-size:.56rem; line-height:1.05; color:var(--x-sub)}
+  .c-ok3{background:var(--ok3-bg)} .c-ok3 .sym{color:var(--ok3-ink)}
+  .c-ok2{background:var(--ok2-bg)} .c-ok2 .sym{color:var(--ok2-ink)}
+  .c-ok1{background:var(--ok1-bg)} .c-ok1 .sym{color:var(--ok1-ink)}
+  .c-x{background:var(--x-bg)} .c-x .sym{color:var(--x-ink)}
+
+  /* ===== サマリ ===== */
+  .summary{margin-top:18px; border:1px solid var(--line); border-radius:9px; background:var(--surface-2); padding:14px 15px}
+  .summary h3{font-size:.9rem; margin:0 0 4px}
+  .summary .s-hint{font-size:.74rem; color:var(--muted); margin:0 0 10px}
+  .mat-chips{display:flex; flex-wrap:wrap; gap:7px}
+  .mat-chip{
+    display:inline-flex; align-items:center; gap:6px; font-size:.8rem; background:var(--surface); border:1px solid var(--line-strong);
+    border-radius:7px; padding:5px 10px;
+  }
+  .mat-chip .mc-sym{font-weight:700; width:16px; text-align:center}
+  .mc-sym.s3{color:var(--ok3-ink)} .mc-sym.s2{color:var(--ok2-ink)} .mc-sym.s1{color:var(--ok1-ink)}
+  .summary .none{font-size:.82rem; color:var(--x-ink)}
+
+  /* ===== 注記 / 免責 ===== */
+  .callout{
+    font-size:.78rem; color:#374151; border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:7px;
+    background:var(--surface-2); padding:12px 14px; margin-top:18px; line-height:1.62; white-space:pre-line;
+  }
+  .disclaimer{
+    font-size:.74rem; color:var(--muted); border:1px solid var(--line); border-left:3px solid var(--faint); border-radius:6px;
+    background:var(--surface-2); padding:11px 14px; margin-top:12px; line-height:1.56;
+  }
+  footer.note{font-size:.72rem; color:var(--faint); margin-top:26px; line-height:1.6}
+
+  @media (max-width:680px){
+    .cat-grid{grid-template-columns:1fr}
+    .scroll-hint{display:block}
+    header.app h1{font-size:1.16rem}
+  }
+
+  @media print{
+    @page{size:A4 landscape; margin:10mm}
+    body{background:#fff; font-size:11px}
+    .wrap{padding:0; max-width:none}
+    .no-print{display:none !important}
+    #report{display:block !important; border:none; padding:0; margin:0}
+    .matrix-wrap{max-height:none; overflow:visible; border:1px solid #999}
+    .matrix thead th, .matrix tbody th.rowhead, .matrix thead th.corner{position:static}
+    .matrix thead th{background:#0e6b7a !important; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+    table.matrix{font-size:8px}
+    .matrix thead th{width:42px; min-width:42px; max-width:42px; padding:3px 2px; font-size:7px}
+    .matrix thead th.corner,.matrix tbody th.rowhead{width:120px; min-width:120px; max-width:120px; padding:4px 5px}
+    .matrix td.cell{height:30px}
+    .cell .sym{font-size:.84rem}
+    .cell .ndi{font-size:5px}
+    .cell,.swatch,.chip,.mat-chip,.c-ok3,.c-ok2,.c-ok1,.c-x{-webkit-print-color-adjust:exact; print-color-adjust:exact}
+    .callout,.disclaimer{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a href="index.html" class="no-print" style="display:inline-block;font-size:.78rem;font-weight:600;color:#0a4d58;text-decoration:none;margin-bottom:12px">← あおい技術サービス事務所（ツール一覧）</a>
+
+  <header class="app no-print">
+    <h1>化学防護手袋 素材選定ツール</h1>    <span class="sub">耐透過性クラスのマトリックス表示（CREATE-SIMPLE の手袋選定の考え方に準拠）</span>
+  </header>
+  <p class="lead no-print">
+    取り扱う化学物質の CAS 番号と、作業分類・作業時間を入力すると、各物質に対する手袋素材の使用可否を
+    マトリックスで表示します。選択した条件で「使用可能」と判定される記号（◎/○/△）だけをそのまま表示し、
+    条件を満たさない素材・データのない素材は × になります。
+  </p>
+
+  <!-- ============ 入力 ============ -->
+  <div id="form" class="no-print">
+
+    <section class="card">
+      <h2><span class="step-no">1</span>物質（CAS番号）</h2>
+      <p class="card-hint">CAS番号を入力してください（最大15物質）。ハイフンの有無は問いません。登録があれば物質名が表示されます。</p>
+      <div class="cas-list" id="casList"></div>
+      <button type="button" class="add-row" id="addRow">＋ 行を追加（最大15）</button>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">2</span>作業分類（化学物質への接触度合）</h2>
+      <p class="card-hint">作業の実態に最も近い分類を選んでください。</p>
+      <div class="cat-grid" id="catGrid">
+        <label class="opt"><input type="radio" name="cat" value="1" />
+          <span class="opt-t">作業分類1</span>
+          <span class="opt-d">接触が大きい作業。手や腕全体／手のひら全体が触れる等、接触面積が大きい作業。</span>
+        </label>
+        <label class="opt"><input type="radio" name="cat" value="2" />
+          <span class="opt-t">作業分類2</span>
+          <span class="opt-d">接触が限られている作業。指先や飛沫など、手の一部が化学物質に触れる作業。</span>
+        </label>
+        <label class="opt"><input type="radio" name="cat" value="3" />
+          <span class="opt-t">作業分類3</span>
+          <span class="opt-d">接触しないと想定される作業。通常は触れない（異常時に飛沫がかかるおそれ）。触れた際は取扱説明書記載の使用可能時間内に速やかに交換。</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="step-no">3</span>作業時間（1回の手袋装着で作業する時間）</h2>
+      <p class="card-hint">1回の装着で連続して使用する時間の範囲を選んでください。</p>
+      <div class="time-row" id="timeRow">
+        <label class="opt time"><input type="radio" name="time" value="over240" />
+          <span class="opt-t">240分超</span></label>
+        <label class="opt time"><input type="radio" name="time" value="btw" />
+          <span class="opt-t">60分超 240分以下</span></label>
+        <label class="opt time"><input type="radio" name="time" value="upto60" />
+          <span class="opt-t">60分以下</span></label>
+      </div>
+    </section>
+
+    <div id="errBox"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="judgeBtn">マトリックスを表示</button>
+      <button type="button" class="ghost" id="printBtn">PDFで保存（印刷）</button>
+      <button type="button" class="ghost" id="clearBtn">クリア</button>
+    </div>
+  </div>
+
+  <!-- ============ 結果 ============ -->
+  <div id="report">
+    <h2 class="r-title">手袋素材 使用可否マトリックス</h2>
+    <div class="r-meta" id="rMeta"></div>
+    <div class="cond" id="rCond"></div>
+    <div id="missNote"></div>
+
+    <div class="legend">
+      <span class="lg"><span class="swatch sw3">◎</span>使用可（耐透過性クラス5・6）</span>
+      <span class="lg"><span class="swatch sw2">○</span>使用可（クラス3・4）</span>
+      <span class="lg"><span class="swatch sw1">△</span>使用可（クラス1・2）</span>
+      <span class="lg"><span class="swatch swx">×</span>使用不可</span>
+      <span class="lg"><span class="swatch swx">×</span>＋「情報なし」＝耐透過性データなし</span>
+    </div>
+    <p class="legend-note">表示している◎/○/△は、選択した作業分類・作業時間で「使用可能」と判定された記号です。条件を満たさない記号、データ上「使用不可」、データのない組合せはすべて × になります。</p>
+
+    <p class="scroll-hint">← 横にスクロールできます →</p>
+    <div class="matrix-wrap"><table class="matrix" id="matrix"></table></div>
+
+    <div class="summary" id="summaryBox"></div>
+
+    <div class="callout" id="legalNote">※安衛則第594条の２（皮膚等障害化学物質の直接接触の防止規定）に基づき着用が義務付けられる不浸透性の保護手袋について、皮膚障害等防止用保護具の選定マニュアルに基づく手袋材料の耐透過性や、手袋候補を表示します。表示は入力された作業分類、作業時間を前提とした手袋の候補ですので、実態を確認の上、選択ください。
+※一部の成分において耐透過性情報がない場合には、【情報なし】と表示されます。該当する手袋材料を選定する場合には、保護具メーカーに問合せを行ってください。</div>
+
+    <div class="disclaimer">
+      本ツールは、厚生労働省が公表する化学防護手袋の耐透過性データ（記号一覧表）および「皮膚障害等防止用保護具の選定マニュアル」（第2版）に基づく<strong>非公式の再実装</strong>です。厚生労働省が提供する公式ツールではありません。表示は入力された作業分類・作業時間を前提とした簡易な目安であり、実際の防護性能を保証するものではありません。重要な判断は、公式資料・専門家・保護具メーカーへの確認の上で行ってください。なお、同一CASに濃度違い等が複数登録されている物質（例：過酸化水素）は、安全側の値に統合して表示しています。
+    </div>
+  </div>
+
+  <footer class="note no-print">
+    データ・手法の出典：厚生労働省「化学防護手袋の耐透過性クラス（記号一覧表）」、および「皮膚障害等防止用保護具の選定マニュアル 第2版（暫定版・2025年2月公表）」（CREATE-SIMPLE STEP5「化学防護手袋選定の考え方」に準拠）。本ツールは同資料に基づき独自に作成したもので、公式ツールではありません。耐透過性クラスは JIS T 8116 に基づきます。
+  </footer>
+</div>
+
+<script src="gloveDB.js"></script>
+<script>
+"use strict";
+
+/* ===== 定数 ===== */
+var SYM = {3:"◎",2:"○",1:"△"};
+var MAX_ROWS = 15;
+/* しきい値（使用可能な最小ランク：3=◎,2=○,1=△）— 選定マニュアル第2版／CREATE-SIMPLEの表に準拠 */
+var THRESHOLD = {
+  "1":{ "over240":3, "btw":2, "upto60":1 },
+  "2":{ "over240":2, "btw":1, "upto60":1 },
+  "3":{ "over240":1, "btw":1, "upto60":1 }
+};
+var TIME_LABEL = { "over240":"240分超", "btw":"60分超240分以下", "upto60":"60分以下" };
+var CAT_LABEL  = { "1":"作業分類1（接触が大きい作業）", "2":"作業分類2（接触が限られている作業）", "3":"作業分類3（接触しないと想定される作業）" };
+
+function $(id){ return document.getElementById(id); }
+function normKey(s){ return String(s||"").replace(/[^0-9]/g,""); }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+
+/* ===== CAS 入力行 ===== */
+function buildRow(){
+  var row = document.createElement("div");
+  row.className = "cas-row";
+  row.innerHTML =
+    '<span class="cas-no"></span>' +
+    '<input type="text" class="cas-input" inputmode="numeric" autocomplete="off" placeholder="例: 108-88-3" />' +
+    '<span class="cas-name muted"></span>' +
+    '<button type="button" class="cas-del" title="この行を削除">×</button>';
+  var input = row.querySelector(".cas-input");
+  var name  = row.querySelector(".cas-name");
+  input.addEventListener("input", function(){ lookupRow(input, name); });
+  row.querySelector(".cas-del").addEventListener("click", function(){
+    row.parentNode.removeChild(row); renumber(); updateAddBtn();
+  });
+  return row;
+}
+function lookupRow(input, nameEl){
+  var raw = input.value.trim();
+  if(raw === ""){ nameEl.textContent = ""; nameEl.className = "cas-name muted"; return; }
+  var rec = gloveDB[normKey(raw)];
+  if(rec){ nameEl.textContent = rec.n || "(名称なし)"; nameEl.className = "cas-name"; }
+  else   { nameEl.textContent = "⚠ 登録なし（CASをご確認ください）"; nameEl.className = "cas-name miss"; }
+}
+function renumber(){
+  var rows = $("casList").querySelectorAll(".cas-row");
+  for(var i=0;i<rows.length;i++){ rows[i].querySelector(".cas-no").textContent = (i+1); }
+}
+function rowCount(){ return $("casList").querySelectorAll(".cas-row").length; }
+function updateAddBtn(){ $("addRow").disabled = rowCount() >= MAX_ROWS; }
+function addRow(){
+  if(rowCount() >= MAX_ROWS) return;
+  $("casList").appendChild(buildRow()); renumber(); updateAddBtn();
+}
+
+/* ===== 選択 UI（ハイライト） ===== */
+function wireOptions(groupName){
+  var inputs = document.querySelectorAll('input[name="'+groupName+'"]');
+  inputs.forEach(function(inp){
+    inp.addEventListener("change", function(){
+      inputs.forEach(function(o){ o.closest(".opt").classList.toggle("sel", o.checked); });
+    });
+  });
+}
+function getRadio(name){
+  var c = document.querySelector('input[name="'+name+'"]:checked');
+  return c ? c.value : null;
+}
+
+/* ===== セル判定 ===== */
+function cellState(v, T){
+  // v: 3/2/1/0/null,  T: 3/2/1
+  if(v === 3 || v === 2 || v === 1){
+    if(v >= T) return { sym:SYM[v], cls:"c-ok"+v, info:false, usable:true, rank:v };
+    return { sym:"×", cls:"c-x", info:false, usable:false, rank:0 };   // 情報あり・基準未満
+  }
+  if(v === 0) return { sym:"×", cls:"c-x", info:false, usable:false, rank:0 };  // 使用不可
+  return { sym:"×", cls:"c-x", info:true, usable:false, rank:0 };               // null = 情報なし
+}
+
+/* ===== 判定・描画 ===== */
+function showError(msg){ $("errBox").innerHTML = '<div class="err">'+esc(msg)+'</div>'; }
+function clearError(){ $("errBox").innerHTML = ""; }
+
+function judge(){
+  clearError();
+  var cat = getRadio("cat");
+  var time = getRadio("time");
+
+  var entries = [], notFound = [], seen = {};
+  var inputs = $("casList").querySelectorAll(".cas-input");
+  for(var i=0;i<inputs.length;i++){
+    var raw = inputs[i].value.trim();
+    if(raw === "") continue;
+    var key = normKey(raw);
+    if(key === ""){ notFound.push(raw); continue; }
+    if(seen[key]) continue;             // 重複CASはスキップ
+    seen[key] = true;
+    var rec = gloveDB[key];
+    if(rec) entries.push({ key:key, cas:raw, rec:rec });
+    else    notFound.push(raw);
+  }
+
+  if(entries.length === 0){
+    showError("登録のある物質が入力されていません。CAS番号をご確認ください（登録があれば物質名が表示されます）。");
+    return;
+  }
+  if(!cat){ showError("作業分類（1〜3）を選択してください。"); return; }
+  if(!time){ showError("作業時間を選択してください。"); return; }
+
+  var T = THRESHOLD[cat][time];
+  renderMatrix(entries, T);
+  renderSummary(entries, T);
+
+  // メタ・条件
+  var now = new Date();
+  var pad = function(n){ return ("0"+n).slice(-2); };
+  $("rMeta").textContent = "作成日時：" + now.getFullYear() + "-" + pad(now.getMonth()+1) + "-" + pad(now.getDate())
+                         + " " + pad(now.getHours()) + ":" + pad(now.getMinutes()) + "　／　対象物質：" + entries.length + "件";
+  $("rCond").innerHTML =
+    '<span class="chip">' + esc(CAT_LABEL[cat]) + '</span>' +
+    '<span class="chip">作業時間：' + esc(TIME_LABEL[time]) + '</span>' +
+    '<span class="chip">使用可能な最小クラス：' + SYM[T] + '</span>';
+
+  // 未登録CASの注記
+  if(notFound.length){
+    $("missNote").innerHTML = '<div class="miss-note">次の入力はデータベースに登録がないため表示していません（CASの誤りでなければ、耐透過性データなし＝メーカーへ要確認）：'
+      + esc(notFound.join("、")) + '</div>';
+  } else {
+    $("missNote").innerHTML = "";
+  }
+
+  $("report").style.display = "block";
+  $("report").scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function renderMatrix(entries, T){
+  var html = "";
+  // ヘッダー
+  html += "<thead><tr><th class='corner'>物質 ＼ 手袋素材</th>";
+  for(var c=0;c<gloveMaterials.length;c++){
+    html += "<th scope='col'>" + esc(gloveMaterials[c]) + "</th>";
+  }
+  html += "</tr></thead>";
+  // 本体
+  html += "<tbody>";
+  for(var r=0;r<entries.length;r++){
+    var e = entries[r];
+    html += "<tr><th class='rowhead' scope='row'>"
+          + "<span class='rh-name'>" + esc(e.rec.n || "(名称なし)") + "</span>"
+          + "<span class='rh-cas'>CAS " + esc(e.rec.c || e.cas) + "</span></th>";
+    for(var c2=0;c2<gloveMaterials.length;c2++){
+      var st = cellState(e.rec.v[c2], T);
+      var inner = "<span class='sym'>" + st.sym + "</span>";
+      if(st.info) inner += "<span class='ndi'>情報なし</span>";
+      html += "<td class='cell " + st.cls + "'><div class='cc'>" + inner + "</div></td>";
+    }
+    html += "</tr>";
+  }
+  html += "</tbody>";
+  $("matrix").innerHTML = html;
+}
+
+function renderSummary(entries, T){
+  var fully = [];
+  for(var c=0;c<gloveMaterials.length;c++){
+    var ok = true, worst = 4;
+    for(var r=0;r<entries.length;r++){
+      var st = cellState(entries[r].rec.v[c], T);
+      if(!st.usable){ ok = false; break; }
+      if(st.rank < worst) worst = st.rank;
+    }
+    if(ok && worst <= 3) fully.push({ name:gloveMaterials[c], rank:worst });
+  }
+
+  var h = "<h3>全物質で使用可能な手袋素材</h3>";
+  h += "<p class='s-hint'>入力したすべての物質について、選択条件で使用可能（◎/○/△）と判定された素材です。記号は全物質のうち最も低い判定（律速）を示します。× や「情報なし」が1つでもある素材は含めていません。</p>";
+  if(fully.length){
+    h += "<div class='mat-chips'>";
+    for(var i=0;i<fully.length;i++){
+      h += "<span class='mat-chip'><span class='mc-sym s"+fully[i].rank+"'>"+SYM[fully[i].rank]+"</span>"+esc(fully[i].name)+"</span>";
+    }
+    h += "</div>";
+  } else {
+    h += "<p class='none'>すべての物質で使用可能な素材はありませんでした。作業時間を短くする（＝こまめに交換する）、作業分類を見直す、または個別物質ごとに上のマトリックスと保護具メーカーの情報をご確認ください。</p>";
+  }
+  $("summaryBox").innerHTML = h;
+}
+
+/* ===== クリア ===== */
+function clearAll(){
+  $("casList").innerHTML = "";
+  for(var i=0;i<3;i++) addRow();
+  document.querySelectorAll('input[name="cat"],input[name="time"]').forEach(function(inp){
+    inp.checked = false; inp.closest(".opt").classList.remove("sel");
+  });
+  clearError();
+  $("report").style.display = "none";
+}
+
+/* ===== 初期化 ===== */
+(function init(){
+  for(var i=0;i<3;i++) addRow();   // 初期3行
+  wireOptions("cat");
+  wireOptions("time");
+  $("addRow").addEventListener("click", addRow);
+  $("judgeBtn").addEventListener("click", judge);
+  $("clearBtn").addEventListener("click", clearAll);
+  $("printBtn").addEventListener("click", function(){ window.print(); });
+})();
+</script>
+</body>
+</html>
