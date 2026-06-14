@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aoi-s-office.jp/sitemap.xml
