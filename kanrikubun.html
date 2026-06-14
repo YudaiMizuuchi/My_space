@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作業環境測定 管理区分判定</title>
+<style>
+  :root{
+    --ink:#1c1c1a; --sub:#5c5c55; --line:#b9b8af; --line2:#d8d7cd;
+    --head:#edece5; --bg:#f6f5f1; --card:#ffffff; --accent:#33486f; --accent2:#2a3c5c;
+    --calc:#f3f2ec; --ok:#1f7a3a; --okbg:#e7f4ea; --warn:#9a6b00; --warnbg:#fbf2da; --bad:#bf2e2e; --badbg:#fce9e7;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","YuGothic","Meiryo",system-ui,sans-serif;
+    font-size:14px;line-height:1.6;-webkit-text-size-adjust:100%}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 80px}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:.02em}
+  .lead{color:var(--sub);font-size:13px;margin:0 0 18px}
+  .cats{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .cat{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--sub);
+    padding:8px 14px;border-radius:6px;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .cat:hover{border-color:var(--accent)}
+  .cat.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  .counts{display:flex;flex-wrap:wrap;align-items:flex-end;gap:14px;margin-bottom:16px;
+    background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:12px 14px}
+  .counts label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--sub)}
+  .counts input{width:90px}
+  input[type=number],input[type=text]{font-family:inherit;font-size:14px;padding:6px 8px;
+    border:1px solid var(--line);border-radius:5px;background:#fff;color:var(--ink);text-align:right}
+  input:focus,select:focus{outline:2px solid #c4cfe4;outline-offset:0;border-color:var(--accent)}
+  select{font-family:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--line);
+    border-radius:5px;background:#fff;color:var(--ink);max-width:100%}
+  button.apply,button.judge{appearance:none;border:none;border-radius:6px;cursor:pointer;
+    font-family:inherit;font-weight:600;color:#fff;background:var(--accent)}
+  button.apply{padding:8px 14px;font-size:13px;background:#6b6a60}
+  button.apply:hover{background:#56554c}
+  button.judge{padding:11px 30px;font-size:15px}
+  button.judge:hover{background:var(--accent2)}
+  .cat-header{background:var(--card);border:1px solid var(--line2);border-radius:8px;
+    padding:14px;margin-bottom:16px}
+  .hfields{display:flex;flex-wrap:wrap;gap:14px}
+  .hfield{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--sub)}
+  .hfield input{width:120px}
+  .readout{margin-top:12px;padding:10px 12px;background:var(--calc);border-radius:6px;
+    font-size:13px;color:var(--ink)}
+  .readout b{font-weight:600}
+  .comp-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .comp-row select{min-width:280px}
+  .comp-e{font-size:12.5px;color:var(--sub);min-width:120px}
+  .comp-del{appearance:none;border:1px solid var(--line);background:#fff;color:var(--bad);
+    border-radius:5px;padding:5px 9px;cursor:pointer;font-size:12px;font-family:inherit}
+  .addcomp{appearance:none;border:1px dashed var(--accent);background:#fff;color:var(--accent);
+    border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px;font-family:inherit;margin-top:4px}
+  .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--ink)}
+  .chk input{width:auto;margin:0}
+  .ov{display:inline-flex;align-items:center;gap:8px;margin-left:6px;font-size:12.5px;color:var(--sub)}
+  .ov input{width:100px}
+  .grid-area{margin-bottom:18px;overflow-x:auto}
+  .gtitle{font-size:13.5px;font-weight:600;margin:14px 0 6px;color:var(--accent)}
+  table.grid{border-collapse:collapse;font-size:13px;min-width:260px}
+  table.grid th,table.grid td{border:1px solid var(--line);padding:3px 6px;text-align:center;white-space:nowrap}
+  table.grid thead th{background:var(--head);font-weight:600;font-size:12px}
+  table.grid th.subhd{white-space:normal;max-width:150px;font-size:11.5px;line-height:1.3;padding:5px 6px}
+  .hsub{font-size:10.5px;color:var(--sub);font-weight:400}
+  table.grid td.no{background:var(--head);color:var(--sub);font-weight:600;width:46px}
+  table.grid td .cell{width:100%;min-width:78px}
+  table.grid td.calc{background:var(--calc);color:var(--ink);min-width:96px;font-variant-numeric:tabular-nums}
+  .actions{margin:8px 0 4px}
+  .error{background:var(--badbg);border:1px solid #e7a9a3;color:var(--bad);border-radius:7px;
+    padding:12px 14px;margin:14px 0;font-size:14px;font-weight:600}
+  .result-area{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:16px;margin-top:18px}
+  .result-area h2,.graph-area h2{font-size:16px;font-weight:600;margin:0 0 12px;
+    padding-bottom:8px;border-bottom:2px solid var(--accent)}
+  .rtable{border-collapse:collapse;width:100%;font-size:13.5px;margin-bottom:16px}
+  .rtable th,.rtable td{border:1px solid var(--line);padding:7px 10px;text-align:center}
+  .rtable th{background:var(--head);font-weight:600}
+  .rtable td.lbl{background:#f7f7f2;font-weight:600;text-align:left;white-space:nowrap}
+  .rtable td.val{font-variant-numeric:tabular-nums}
+  .opts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .opt{border:1px solid var(--line);border-radius:5px;padding:4px 10px;font-size:12.5px;color:var(--sub);background:#fff}
+  .opt.on{font-weight:700}
+  .opt.on.d1{color:var(--ok);background:var(--okbg);border-color:#a9d8b6}
+  .opt.on.d2{color:var(--warn);background:var(--warnbg);border-color:#e6cd8e}
+  .opt.on.d3{color:var(--bad);background:var(--badbg);border-color:#e7a9a3}
+  .badge{display:inline-block;padding:8px 20px;border-radius:7px;font-size:18px;font-weight:700}
+  .badge.d1{color:var(--ok);background:var(--okbg);border:1.5px solid #7fc594}
+  .badge.d2{color:var(--warn);background:var(--warnbg);border:1.5px solid #ddbd6a}
+  .badge.d3{color:var(--bad);background:var(--badbg);border:1.5px solid #df938c}
+  .ecard{background:var(--calc);border-radius:7px;padding:11px 14px;margin-bottom:14px;font-size:13.5px}
+  .ecard b{font-weight:600}
+  .ej-list{margin:6px 0 0;padding-left:18px;font-size:12.5px;color:var(--sub)}
+  .graph-area{background:var(--card);border:1px solid var(--line2);border-radius:8px;padding:16px;margin-top:18px}
+  .gblock{margin-bottom:18px}
+  .gblock h3{font-size:14px;font-weight:600;margin:0 0 6px}
+  .gnote{font-size:12.5px;color:var(--bad);margin:6px 0 0;font-weight:600}
+  .glegend{display:flex;flex-wrap:wrap;gap:18px;margin-top:6px;font-size:12.5px;color:var(--sub)}
+  .glegend .lg{display:inline-flex;align-items:center;gap:6px}
+  .small{font-size:12px;color:var(--sub)}
+  @media(max-width:640px){.wrap{padding:14px 10px 70px}.hfield input{width:108px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>作業環境測定 管理区分判定</h1>
+  <p class="lead">カテゴリを選び、A測定・B測定の個数と測定値を入力して「判定」を押してください。（1日測定／幾何標準偏差・標準偏差はいずれも標本標準偏差 n−1 で算出）</p>
+
+  <div class="cats" id="cats">
+    <button class="cat active" data-cat="dust">粉じん</button>
+    <button class="cat" data-cat="solvent_single">有機溶剤（単一）</button>
+    <button class="cat" data-cat="solvent_mixed">有機溶剤（混合）</button>
+    <button class="cat" data-cat="special">特化物</button>
+    <button class="cat" data-cat="noise">騒音</button>
+  </div>
+
+  <div class="counts">
+    <label>A測定の個数（最大50）<input type="number" id="aCount" min="1" max="50" value="5"></label>
+    <label>B測定の個数（最大5）<input type="number" id="bCount" min="0" max="5" value="0"></label>
+    <button class="apply" id="applyBtn">入力欄を作成・更新</button>
+  </div>
+
+  <div class="cat-header" id="catHeader"></div>
+  <div class="grid-area" id="gridArea"></div>
+
+  <div class="actions"><button class="judge" id="judgeBtn">判定</button></div>
+  <div class="error" id="errorBox" hidden></div>
+
+  <div class="result-area" id="resultArea" hidden></div>
+  <div class="graph-area" id="graphArea" hidden></div>
+</div>
+
+<script>
+/* ===== 管理濃度データベース（作業環境評価基準 別表・現行値） ===== */
+const SOLVENTS = [
+ {n:"アセトン",v:500,u:"ppm"},{n:"イソブチルアルコール",v:50,u:"ppm"},
+ {n:"イソプロピルアルコール",v:200,u:"ppm"},{n:"イソペンチルアルコール（イソアミルアルコール）",v:100,u:"ppm"},
+ {n:"エチルエーテル",v:400,u:"ppm"},{n:"エチレングリコールモノエチルエーテル（セロソルブ）",v:5,u:"ppm"},
+ {n:"エチレングリコールモノエチルエーテルアセテート（セロソルブアセテート）",v:5,u:"ppm"},
+ {n:"エチレングリコールモノ‐ノルマル‐ブチルエーテル（ブチルセロソルブ）",v:25,u:"ppm"},
+ {n:"エチレングリコールモノメチルエーテル（メチルセロソルブ）",v:0.1,u:"ppm"},
+ {n:"オルト‐ジクロルベンゼン",v:25,u:"ppm"},{n:"キシレン",v:50,u:"ppm"},{n:"クレゾール",v:5,u:"ppm"},
+ {n:"クロルベンゼン",v:10,u:"ppm"},{n:"酢酸イソブチル",v:150,u:"ppm"},{n:"酢酸イソプロピル",v:100,u:"ppm"},
+ {n:"酢酸イソペンチル（酢酸イソアミル）",v:50,u:"ppm"},{n:"酢酸エチル",v:200,u:"ppm"},
+ {n:"酢酸ノルマル‐ブチル",v:150,u:"ppm"},{n:"酢酸ノルマル‐プロピル",v:200,u:"ppm"},
+ {n:"酢酸ノルマル‐ペンチル（酢酸ノルマル‐アミル）",v:50,u:"ppm"},{n:"酢酸メチル",v:200,u:"ppm"},
+ {n:"シクロヘキサノール",v:25,u:"ppm"},{n:"シクロヘキサノン",v:20,u:"ppm"},
+ {n:"1,2‐ジクロルエチレン（二塩化アセチレン）",v:150,u:"ppm"},{n:"N,N‐ジメチルホルムアミド",v:10,u:"ppm"},
+ {n:"テトラヒドロフラン",v:50,u:"ppm"},{n:"1,1,1‐トリクロルエタン",v:200,u:"ppm"},
+ {n:"トルエン",v:20,u:"ppm"},{n:"二硫化炭素",v:1,u:"ppm"},{n:"ノルマルヘキサン",v:40,u:"ppm"},
+ {n:"1‐ブタノール",v:25,u:"ppm"},{n:"2‐ブタノール",v:100,u:"ppm"},{n:"メタノール",v:200,u:"ppm"},
+ {n:"メチルエチルケトン",v:200,u:"ppm"},{n:"メチルシクロヘキサノール",v:50,u:"ppm"},
+ {n:"メチルシクロヘキサノン",v:50,u:"ppm"},{n:"メチル‐ノルマル‐ブチルケトン",v:5,u:"ppm"}
+];
+const SPECIALS = [
+ {n:"アクリルアミド",v:0.1,u:"mg/m³"},{n:"アクリロニトリル",v:2,u:"ppm"},
+ {n:"アルキル水銀化合物（水銀として）",v:0.01,u:"mg/m³"},{n:"エチルベンゼン",v:20,u:"ppm"},
+ {n:"エチレンイミン",v:0.05,u:"ppm"},{n:"エチレンオキシド",v:1,u:"ppm"},{n:"塩化ビニル",v:2,u:"ppm"},
+ {n:"塩素",v:0.5,u:"ppm"},{n:"塩素化ビフェニル（PCB）",v:0.01,u:"mg/m³"},
+ {n:"オルト‐トルイジン",v:1,u:"ppm"},{n:"オルト‐フタロジニトリル",v:0.01,u:"mg/m³"},
+ {n:"カドミウム及びその化合物（カドミウムとして）",v:0.05,u:"mg/m³"},
+ {n:"クロム酸及びその塩（クロムとして）",v:0.05,u:"mg/m³"},{n:"クロロホルム",v:3,u:"ppm"},
+ {n:"五酸化バナジウム（バナジウムとして）",v:0.03,u:"mg/m³"},
+ {n:"コバルト及びその無機化合物（コバルトとして）",v:0.02,u:"mg/m³"},
+ {n:"コールタール（ベンゼン可溶性成分として）",v:0.2,u:"mg/m³"},{n:"酸化プロピレン",v:2,u:"ppm"},
+ {n:"三酸化二アンチモン（アンチモンとして）",v:0.1,u:"mg/m³"},
+ {n:"シアン化カリウム（シアンとして）",v:3,u:"mg/m³"},{n:"シアン化水素",v:3,u:"ppm"},
+ {n:"シアン化ナトリウム（シアンとして）",v:3,u:"mg/m³"},{n:"四塩化炭素",v:5,u:"ppm"},
+ {n:"1,4‐ジオキサン",v:10,u:"ppm"},{n:"1,2‐ジクロロエタン（二塩化エチレン）",v:10,u:"ppm"},
+ {n:"3,3'‐ジクロロ‐4,4'‐ジアミノジフェニルメタン",v:0.005,u:"mg/m³"},
+ {n:"1,2‐ジクロロプロパン",v:1,u:"ppm"},{n:"ジクロロメタン（二塩化メチレン）",v:50,u:"ppm"},
+ {n:"ジメチル‐2,2‐ジクロロビニルホスフェイト（DDVP）",v:0.1,u:"mg/m³"},
+ {n:"1,1‐ジメチルヒドラジン",v:0.01,u:"ppm"},{n:"臭化メチル",v:1,u:"ppm"},
+ {n:"重クロム酸及びその塩（クロムとして）",v:0.05,u:"mg/m³"},
+ {n:"水銀及びその無機化合物（水銀として／硫化水銀を除く）",v:0.025,u:"mg/m³"},
+ {n:"スチレン",v:20,u:"ppm"},{n:"1,1,2,2‐テトラクロロエタン（四塩化アセチレン）",v:1,u:"ppm"},
+ {n:"テトラクロロエチレン（パークロルエチレン）",v:25,u:"ppm"},{n:"トリクロロエチレン",v:10,u:"ppm"},
+ {n:"トリレンジイソシアネート",v:0.005,u:"ppm"},{n:"ナフタレン",v:10,u:"ppm"},
+ {n:"ニッケル化合物（ニッケルとして／粉状の物に限る）",v:0.1,u:"mg/m³"},
+ {n:"ニッケルカルボニル",v:0.001,u:"ppm"},{n:"ニトログリコール",v:0.05,u:"ppm"},
+ {n:"パラ‐ニトロクロルベンゼン",v:0.6,u:"mg/m³"},
+ {n:"砒素及びその化合物（砒素として／アルシン及び砒化ガリウムを除く）",v:0.003,u:"mg/m³"},
+ {n:"弗化水素",v:0.5,u:"ppm"},{n:"ベータ‐プロピオラクトン",v:0.5,u:"ppm"},
+ {n:"ベリリウム及びその化合物（ベリリウムとして）",v:0.001,u:"mg/m³"},{n:"ベンゼン",v:1,u:"ppm"},
+ {n:"ベンゾトリクロリド",v:0.05,u:"ppm"},
+ {n:"ペンタクロルフェノール（PCP）及びそのナトリウム塩（PCPとして）",v:0.5,u:"mg/m³"},
+ {n:"ホルムアルデヒド",v:0.1,u:"ppm"},{n:"マンガン及びその化合物（マンガンとして）",v:0.05,u:"mg/m³"},
+ {n:"メチルイソブチルケトン",v:20,u:"ppm"},{n:"沃化メチル",v:2,u:"ppm"},
+ {n:"リフラクトリーセラミックファイバー（5μm以上の繊維として）",v:0.3,u:"本/cm³"},
+ {n:"硫化水素",v:1,u:"ppm"},{n:"硫酸ジメチル",v:0.1,u:"ppm"},
+ {n:"石綿（5μm以上の繊維として）",v:0.15,u:"本/cm³"},{n:"鉛及びその化合物（鉛として）",v:0.05,u:"mg/m³"}
+];
+const UNITS=["ppm","mg/m³","本/cm³","無次元"];
+const ROMAN={1:"Ⅰ",2:"Ⅱ",3:"Ⅲ"};
+
+/* ===== 状態 ===== */
+let cat="dust";
+let comps=[null];
+let override=false;
+
+/* ===== ユーティリティ・桁処理 ===== */
+const $=id=>document.getElementById(id);
+function sig(x,d){d=d||4;if(x==null||!isFinite(x))return"—";if(x===0)return"0";return Number(x.toPrecision(d)).toString();}
+function fix1(x){if(x==null||!isFinite(x))return"—";return x.toFixed(1);}
+function fix3(x){if(x==null||!isFinite(x))return"—";return x.toFixed(3);}
+function round3(x){return Number(x.toFixed(3));}
+function _place(x,d){const e=Math.floor(Math.log10(Math.abs(x)));return e-(d-1);}
+function _fmt(v){if(v===0)return"0";const pp=_place(v,2);return v.toFixed(Math.max(0,-pp));}
+function num2(x){if(x==null||!isFinite(x))return"—";if(x===0)return"0";const p=Math.pow(10,_place(x,2));return _fmt(Math.round(x/p)*p);}
+function numFloor2(x){if(x==null||!isFinite(x))return"—";if(x===0)return"0";const p=Math.pow(10,_place(x,2));return _fmt(Math.floor(x/p+1e-9)*p);}
+function numCeil2(x){if(x==null||!isFinite(x))return"—";if(x===0)return"0";const p=Math.pow(10,_place(x,2));return _fmt(Math.ceil(x/p-1e-9)*p);}
+function aCount(){return Math.max(0,Math.min(50,parseInt($("aCount").value)||0));}
+function bCount(){return Math.max(0,Math.min(5,parseInt($("bCount").value)||0));}
+function listFor(){return cat==="special"?SPECIALS:SOLVENTS;}
+
+/* ===== ヘッダー描画 ===== */
+function renderHeader(){
+  const h=$("catHeader");
+  if(cat==="dust"){
+    h.innerHTML=
+      '<div class="hfields">'+
+      hf("dustMass","採じん量 (mg)")+hf("dustVol","採気量 (m³)")+hf("dustCount","カウント値 (count)")+
+      hf("dustTime","採取時間 (min)")+hf("dustSi","遊離けい酸含有率 (%)")+
+      '</div><div class="readout" id="dustRead">質量濃度変換係数・管理濃度は値を入力すると表示されます。</div>';
+  }else if(cat==="solvent_single"||cat==="special"){
+    const opts=listFor().map((s,i)=>`<option value="${i}">${s.n}（${s.v} ${s.u}）</option>`).join("");
+    h.innerHTML=
+      '<div class="hfields"><div class="hfield" style="flex:1;min-width:280px">物質を選択'+
+      `<select id="subSel">${opts}</select></div></div>`+
+      '<label class="chk"><input type="checkbox" id="ovChk">管理濃度を指定する'+
+      '<span class="ov">数値 <input type="number" id="ovVal" disabled>'+
+      `単位 <select id="ovUnit" disabled>${UNITS.map(u=>`<option>${u}</option>`).join("")}</select></span></label>`+
+      '<div class="readout" id="subRead"></div>';
+  }else if(cat==="solvent_mixed"){
+    h.innerHTML='<div class="small" style="margin-bottom:8px">有機溶剤を2〜15成分選択してください。混合の管理濃度は 1（無次元）として評価します。</div>'+
+      '<div id="compBox"></div><button class="addcomp" id="addComp">＋ 成分を追加</button>'+
+      '<div class="readout" id="mixRead"></div>';
+  }else{
+    h.innerHTML='<div class="readout">各測定点の<b>等価騒音レベル (dB)</b> を入力してください。'+
+      'A測定平均値の算定では 80dB 未満の測定値は除外します（全データが 80dB 未満の場合のみ全データを使用し、平均・標準偏差を「（ ）」付きで表示）。</div>';
+  }
+  bindHeader();
+  updateReadouts();
+}
+function hf(id,label){return `<div class="hfield">${label}<input type="number" id="${id}"></div>`;}
+
+function bindHeader(){
+  if(cat==="dust"){
+    ["dustMass","dustVol","dustCount","dustTime","dustSi"].forEach(id=>$(id).addEventListener("input",()=>{updateReadouts();updateDerived();}));
+  }else if(cat==="solvent_single"||cat==="special"){
+    $("subSel").addEventListener("change",()=>{updateReadouts();renderGrid();});
+    $("ovChk").addEventListener("change",e=>{
+      override=e.target.checked;
+      $("ovVal").disabled=!override; $("ovUnit").disabled=!override;
+      if(override){const s=listFor()[+$("subSel").value];$("ovVal").value=s.v;$("ovUnit").value=s.u;}
+      updateReadouts();renderGrid();
+    });
+    $("ovVal").addEventListener("input",()=>{updateReadouts();renderGrid();});
+    $("ovUnit").addEventListener("change",()=>{updateReadouts();renderGrid();});
+  }else if(cat==="solvent_mixed"){
+    $("addComp").addEventListener("click",()=>{if(comps.length<15){comps.push(null);renderComps();renderGrid();}});
+    renderComps();
+  }
+}
+function renderComps(){
+  const box=$("compBox");if(!box)return;
+  const opts=i=>SOLVENTS.map((s,j)=>`<option value="${j}" ${comps[i]===j?"selected":""}>${s.n}（${s.v} ${s.u}）</option>`).join("");
+  box.innerHTML=comps.map((c,i)=>
+    `<div class="comp-row"><span class="small">成分${i+1}</span>`+
+    `<select data-ci="${i}"><option value="">— 選択 —</option>${opts(i)}</select>`+
+    `<span class="comp-e" id="ce${i}">${c!=null?("管理濃度 "+SOLVENTS[c].v+" "+SOLVENTS[c].u):""}</span>`+
+    `<button class="comp-del" data-del="${i}">削除</button></div>`).join("");
+  box.querySelectorAll("select[data-ci]").forEach(sel=>sel.addEventListener("change",e=>{
+    const i=+e.target.dataset.ci;comps[i]=e.target.value===""?null:+e.target.value;
+    $("ce"+i).textContent=comps[i]!=null?("管理濃度 "+SOLVENTS[comps[i]].v+" "+SOLVENTS[comps[i]].u):"";
+    renderGrid();updateDerived();
+  }));
+  box.querySelectorAll("button[data-del]").forEach(b=>b.addEventListener("click",e=>{
+    const i=+e.target.dataset.del;if(comps.length>1){comps.splice(i,1);renderComps();renderGrid();updateDerived();}
+  }));
+}
+
+/* ===== 管理濃度 E / 変換係数 K ===== */
+function computeK(){
+  if(cat!=="dust")return null;
+  const m=parseFloat($("dustMass").value),vo=parseFloat($("dustVol").value),
+        c=parseFloat($("dustCount").value),t=parseFloat($("dustTime").value);
+  if(![m,vo,c,t].every(isFinite)||vo<=0||c<=0)return null;
+  return (m*t)/(vo*c);
+}
+function computeE(){
+  if(cat==="dust"){const q=parseFloat($("dustSi").value);if(!isFinite(q))return null;return{E:3.0/(1.19*q+1),u:"mg/m³"};}
+  if(cat==="solvent_mixed")return{E:1,u:"無次元"};
+  if(cat==="solvent_single"||cat==="special"){
+    if(override){const v=parseFloat($("ovVal").value);if(!isFinite(v)||v<=0)return null;return{E:v,u:$("ovUnit").value};}
+    const s=listFor()[+$("subSel").value];return{E:s.v,u:s.u};
+  }
+  return null;
+}
+function updateReadouts(){
+  if(cat==="dust"){
+    const K=computeK(),E=computeE();const r=$("dustRead");if(!r)return;
+    r.innerHTML="質量濃度変換係数 <b>K = "+(K!=null?num2(K):"—")+"</b>（mg/m³ ÷ cpm）　／　管理濃度 <b>E = "+(E?num2(E.E)+" "+E.u:"—")+"</b>"+
+      (E?"　= 3.0 / (1.19 × "+($("dustSi").value||"Q")+" + 1)":"");
+  }else if((cat==="solvent_single"||cat==="special")&&$("subRead")){
+    const s=listFor()[+$("subSel").value];
+    const eStr=override?($("ovVal").value.trim()||"—"):String(s.v);
+    const uStr=override?$("ovUnit").value:s.u;
+    $("subRead").innerHTML="管理濃度 <b>E = "+eStr+" "+uStr+"</b>"+(override?"（指定値）":"（データベース値）");
+  }else if(cat==="solvent_mixed"&&$("mixRead")){
+    const sel=comps.filter(c=>c!=null);
+    $("mixRead").innerHTML="管理濃度 <b>E = 1（無次元）</b>"+
+      (sel.length?'<ul class="ej-list"><li>'+sel.map(c=>"E（"+SOLVENTS[c].n+"）= "+SOLVENTS[c].v+" "+SOLVENTS[c].u).join("</li><li>")+"</li></ul>":"");
+  }
+}
+
+/* ===== グリッド描画 ===== */
+function colsFor(){
+  if(cat==="dust")return ["相対濃度①","相対濃度②","質量濃度 (mg/m³)"];
+  if(cat==="solvent_single"||cat==="special"){const E=computeE();return ["濃度"+(E?" ("+E.u+")":"")];}
+  if(cat==="solvent_mixed")return [];
+  return ["等価騒音レベル (dB)"];
+}
+function buildTable(sec,rows,start){
+  const cols=colsFor();
+  let html='<table class="grid"><thead>';
+  if(cat==="solvent_mixed"){
+    const sel=comps.filter(c=>c!=null);
+    html+='<tr><th rowspan="2">№</th>'+sel.map(c=>`<th class="subhd" colspan="2">${SOLVENTS[c].n}<br><span class="hsub">管理濃度 ${SOLVENTS[c].v} ${SOLVENTS[c].u}</span></th>`).join("")+'<th rowspan="2">換算値の合計<br>Σ(Cⱼ/Eⱼ)</th></tr>';
+    html+='<tr>'+sel.map(()=>'<th>濃度 Cⱼ</th><th>換算値 Cⱼ/Eⱼ</th>').join("")+'</tr>';
+  }else{
+    html+='<tr><th>№</th>'+cols.map(c=>`<th>${c}</th>`).join("")+'</tr>';
+  }
+  html+='</thead><tbody>';
+  for(let i=0;i<rows;i++){
+    html+=`<tr><td class="no">${start+i}</td>`;
+    if(cat==="dust"){
+      html+=cinput(sec,i,"r1")+cinput(sec,i,"r2")+`<td class="calc"><span class="mass" data-sec="${sec}" data-row="${i}">—</span></td>`;
+    }else if(cat==="solvent_single"||cat==="special"){
+      html+=cinput(sec,i,"c");
+    }else if(cat==="solvent_mixed"){
+      const sel=comps.filter(c=>c!=null);
+      sel.forEach((c,j)=>{html+=cinput(sec,i,"m"+j);html+=`<td class="calc"><span class="conv" data-sec="${sec}" data-row="${i}" data-cj="${j}">—</span></td>`;});
+      html+=`<td class="calc"><span class="sigma" data-sec="${sec}" data-row="${i}">—</span></td>`;
+    }else{
+      html+=cinput(sec,i,"db");
+    }
+    html+='</tr>';
+  }
+  return html+'</tbody></table>';
+}
+function cinput(sec,row,col){return `<td><input class="cell" type="number" data-sec="${sec}" data-row="${row}" data-col="${col}"></td>`;}
+
+function renderGrid(){
+  const a=aCount(),b=bCount();
+  let html=`<div class="gtitle">〔A測定データ〕${a}点</div>`+buildTable("A",a,1);
+  if(b>0)html+=`<div class="gtitle">〔B測定データ〕${b}点</div>`+buildTable("B",b,1);
+  $("gridArea").innerHTML=html;
+  updateReadouts();
+  $("resultArea").hidden=true;$("graphArea").hidden=true;$("errorBox").hidden=true;
+}
+
+/* ===== 派生列（質量濃度＝有効数字2桁 / 換算値＝小数第3位） ===== */
+function updateDerived(){
+  if(cat==="dust"){
+    const K=computeK();
+    document.querySelectorAll(".mass").forEach(sp=>{
+      const sec=sp.dataset.sec,row=sp.dataset.row;
+      const r1=val(sec,row,"r1"),r2=val(sec,row,"r2");
+      sp.textContent=(K!=null&&isFinite(r1)&&isFinite(r2))?num2(K*(r1+r2)/2):"—";
+    });
+  }else if(cat==="solvent_mixed"){
+    const sel=comps.filter(c=>c!=null);
+    document.querySelectorAll(".conv").forEach(sp=>{
+      const sec=sp.dataset.sec,row=sp.dataset.row,j=+sp.dataset.cj,c=sel[j];
+      const v=(c!=null)?val(sec,row,"m"+j):NaN;
+      sp.textContent=(c!=null&&isFinite(v))?fix3(v/SOLVENTS[c].v):"—";
+    });
+    document.querySelectorAll(".sigma").forEach(sp=>{
+      const sec=sp.dataset.sec,row=sp.dataset.row;let s=0,ok=sel.length>0;
+      sel.forEach((c,j)=>{const v=val(sec,row,"m"+j);if(!isFinite(v)){ok=false;}else{s+=round3(v/SOLVENTS[c].v);}});
+      sp.textContent=ok?fix3(s):"—";
+    });
+  }
+}
+function val(sec,row,col){
+  const el=document.querySelector(`input[data-sec="${sec}"][data-row="${row}"][data-col="${col}"]`);
+  if(!el||el.value==="")return NaN;return parseFloat(el.value);
+}
+
+/* ===== 統計 ===== */
+function geoStats(vals){
+  const n=vals.length,logs=vals.map(v=>Math.log10(v));
+  const meanLog=logs.reduce((a,b)=>a+b,0)/n,M1=Math.pow(10,meanLog);
+  let logS1=0;
+  if(n>=2){const varr=logs.reduce((a,b)=>a+(b-meanLog)*(b-meanLog),0)/(n-1);logS1=Math.sqrt(varr);}
+  const sigma1=Math.pow(10,logS1);
+  const logST=Math.sqrt(logS1*logS1+0.084),sigmaT=Math.pow(10,logST);
+  const EA1=Math.pow(10,meanLog+1.645*logST),EA2=Math.pow(10,meanLog+1.151*(logS1*logS1+0.084));
+  return {n,M1,sigma1,sigmaT,EA1,EA2,single:n<2};
+}
+function noiseStats(vals){
+  const above=vals.filter(v=>v>=80);
+  const allBelow=above.length===0,used=allBelow?vals:above,n=used.length;
+  const mean=used.reduce((a,b)=>a+b,0)/n;
+  let sd=null;
+  if(n>=2)sd=Math.sqrt(used.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1));
+  return {mean,sd,n,allBelow};
+}
+const aDivChem=(e1,e2,E)=>e1<E?1:(e2>E?3:2);
+const bDivChem=(cb,E)=>cb<E?1:(cb>1.5*E?3:2);
+const divNoise=x=>x<85?1:(x<90?2:3);
+
+/* ===== 判定 ===== */
+function judge(){
+  $("errorBox").hidden=true;
+  const a=aCount(),b=bCount();
+  if(a<1){return err("A測定の個数を1以上で入力してください。");}
+  let E=null,K=null,sel=[];
+  if(cat==="dust"){
+    for(const id of ["dustMass","dustVol","dustCount","dustTime","dustSi"])
+      if($(id).value===""){return err("入力欄に空欄があります。数値を入力してください。");}
+    K=computeK();E=computeE();
+    if(K==null||E==null)return err("採取条件の数値が正しくありません（採気量・カウント値は正の数）。");
+  }else if(cat==="solvent_single"||cat==="special"){
+    if(override&&$("ovVal").value==="")return err("入力欄に空欄があります。数値を入力してください。");
+    E=computeE();if(E==null)return err("管理濃度（数値）を正しく入力してください。");
+  }else if(cat==="solvent_mixed"){
+    sel=comps.filter(c=>c!=null);
+    if(sel.length<2)return err("有機溶剤（混合）は2成分以上を選択してください。");
+    E=computeE();
+  }
+  const pts=gather("A",a,sel),ptsB=b>0?gather("B",b,sel):{ok:true,vals:[],raws:[]};
+  if(!pts.ok||!ptsB.ok){
+    if(pts.empty||ptsB.empty)return err("入力欄に空欄があります。数値を入力してください。");
+    return err("正の数値を入力してください（混合は各成分の合計が正になる必要があります）。");
+  }
+  if(cat==="noise")renderNoise(pts.vals,ptsB.vals,ptsB.raws,b>0);
+  else renderChem(pts.vals,ptsB.vals,ptsB.raws,b>0,E,K);
+}
+function gather(sec,rows,sel){
+  const vals=[],raws=[];let empty=false,bad=false;
+  for(let i=0;i<rows;i++){
+    if(cat==="dust"){
+      const r1=raw(sec,i,"r1"),r2=raw(sec,i,"r2");
+      if(r1===""||r2===""){empty=true;continue;}
+      const a=parseFloat(r1),bb=parseFloat(r2);
+      if(!isFinite(a)||!isFinite(bb)||a<=0||bb<=0){bad=true;continue;}
+      vals.push(computeK()*(a+bb)/2);raws.push(null);
+    }else if(cat==="solvent_single"||cat==="special"){
+      const c=raw(sec,i,"c");if(c===""){empty=true;continue;}
+      const v=parseFloat(c);if(!isFinite(v)||v<=0){bad=true;continue;}vals.push(v);raws.push(c.trim());
+    }else if(cat==="solvent_mixed"){
+      let s=0,rowEmpty=false,rowBad=false;
+      sel.forEach((c,j)=>{const r=raw(sec,i,"m"+j);if(r===""){rowEmpty=true;}else{const v=parseFloat(r);if(!isFinite(v)||v<0){rowBad=true;}else{s+=round3(v/SOLVENTS[c].v);}}});
+      if(rowEmpty){empty=true;continue;}if(rowBad||s<=0){bad=true;continue;}vals.push(s);raws.push(null);
+    }else{
+      const d=raw(sec,i,"db");if(d===""){empty=true;continue;}
+      const v=parseFloat(d);if(!isFinite(v)||v<=0){bad=true;continue;}vals.push(v);raws.push(d.trim());
+    }
+  }
+  return {ok:!empty&&!bad&&vals.length===rows,empty,vals,raws};
+}
+function raw(sec,row,col){const el=document.querySelector(`input[data-sec="${sec}"][data-row="${row}"][data-col="${col}"]`);return el?el.value:"";}
+function err(m){const e=$("errorBox");e.textContent=m;e.hidden=false;$("resultArea").hidden=true;$("graphArea").hidden=true;e.scrollIntoView({behavior:"smooth",block:"center"});}
+
+/* ===== 結果描画（化学系） ===== */
+function renderChem(aVals,bVals,bRaws,hasB,E,K){
+  const st=geoStats(aVals);
+  const e=E.E,unit=E.u;
+  const aDiv=aDivChem(st.EA1,st.EA2,e);
+  let CB=null,bDiv=null,cbDisp="—（B測定なし）";
+  if(hasB){
+    CB=Math.max.apply(null,bVals);bDiv=bDivChem(CB,e);
+    const idx=bVals.indexOf(CB);
+    if(cat==="solvent_single"||cat==="special")cbDisp=bRaws[idx];
+    else if(cat==="dust")cbDisp=num2(CB);
+    else cbDisp=fix3(CB);
+  }
+  const kanri=hasB?Math.max(aDiv,bDiv):aDiv;
+  const sd=st.single?"※":num2(st.sigma1);
+  let eDisp;
+  if(cat==="dust")eDisp=num2(e);
+  else if(cat==="solvent_mixed")eDisp="1";
+  else eDisp=override?($("ovVal").value.trim()):String(listFor()[+$("subSel").value].v);
+  let ecard;
+  if(cat==="dust")ecard=`<div class="ecard">質量濃度変換係数 <b>K = ${num2(K)}</b>　／　管理濃度 <b>E = ${eDisp} ${unit}</b></div>`;
+  else if(cat==="solvent_mixed")ecard=`<div class="ecard">管理濃度 <b>E = 1（無次元）</b><ul class="ej-list"><li>`+comps.filter(c=>c!=null).map(c=>"E（"+SOLVENTS[c].n+"）= "+SOLVENTS[c].v+" "+SOLVENTS[c].u).join("</li><li>")+`</li></ul></div>`;
+  else ecard=`<div class="ecard">管理濃度 <b>E = ${eDisp} ${unit}</b></div>`;
+  const r=$("resultArea");
+  r.innerHTML='<h2>測定結果</h2>'+ecard+
+    '<table class="rtable"><tr><th>区　分</th><th>1日目</th><th>2日目</th><th>総合（M及びσ）</th></tr>'+
+    `<tr><td class="lbl">幾何平均値</td><td class="val">M₁ = ${num2(st.M1)}</td><td class="val">※</td><td class="val">M = ${num2(st.M1)}</td></tr>`+
+    `<tr><td class="lbl">幾何標準偏差</td><td class="val">σ₁ = ${sd}</td><td class="val">※</td><td class="val">σ = ${num2(st.sigmaT)}</td></tr>`+
+    `<tr><td class="lbl">第1評価値 E<sub>A1</sub></td><td class="val" colspan="3">${numFloor2(st.EA1)}　<span class="small">（有効数字2桁・切り捨て）</span></td></tr>`+
+    `<tr><td class="lbl">第2評価値 E<sub>A2</sub></td><td class="val" colspan="3">${numCeil2(st.EA2)}　<span class="small">（有効数字2桁・切り上げ）</span></td></tr>`+
+    `<tr><td class="lbl">B測定値（最大値）C<sub>B</sub></td><td class="val" colspan="3">${cbDisp}</td></tr>`+
+    '</table>'+
+    '<h2 style="margin-top:18px">評価</h2>'+
+    '<table class="rtable">'+
+    `<tr><td class="lbl">A測定の結果</td><td>${opts3([["E<sub>A1</sub> &lt; E",aDiv===1],["E<sub>A1</sub> ≧ E ≧ E<sub>A2</sub>",aDiv===2],["E<sub>A2</sub> &gt; E",aDiv===3]])}<div class="small" style="margin-top:5px">→ A測定区分 第${ROMAN[aDiv]}</div></td></tr>`+
+    `<tr><td class="lbl">B測定の結果</td><td>${hasB?opts3([["C<sub>B</sub> &lt; E",bDiv===1],["E ≦ C<sub>B</sub> ≦ 1.5E",bDiv===2],["C<sub>B</sub> &gt; 1.5E",bDiv===3]])+`<div class="small" style="margin-top:5px">→ B測定区分 第${ROMAN[bDiv]}</div>`:'<span class="small">B測定なし（A測定のみで判定）</span>'}</td></tr>`+
+    `<tr><td class="lbl">管理区分</td><td><span class="badge d${kanri}">第${kanri}管理区分</span></td></tr>`+
+    '</table>';
+  r.hidden=false;
+  let g='<h2>グラフ</h2>';
+  const ga=chemAGraph(st.M1,st.sigma1,e);g+='<div class="gblock"><h3>A測定（σ₁ × M₁/E）</h3>'+ga.svg+ga.notes+'</div>';
+  if(hasB){const gb=chemBGraph(CB,e);g+='<div class="gblock"><h3>B測定（C<sub>B</sub>/E）</h3>'+gb.svg+gb.notes+'</div>';}
+  $("graphArea").innerHTML=g;$("graphArea").hidden=false;
+  r.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function opts3(arr){return '<div class="opts">'+arr.map((o,i)=>`<span class="opt ${o[1]?"on d"+(i+1):""}">${o[0]}</span>`).join("")+'</div>';}
+
+/* ===== 結果描画（騒音） ===== */
+function renderNoise(aVals,bVals,bRaws,hasB){
+  const st=noiseStats(aVals);
+  const aDiv=divNoise(st.mean);
+  let bMax=null,bDiv=null,bDisp="—（B測定なし）";
+  if(hasB){bMax=Math.max.apply(null,bVals);bDiv=divNoise(bMax);const idx=bVals.indexOf(bMax);bDisp=bRaws[idx]+" dB";}
+  const kanri=hasB?Math.max(aDiv,bDiv):aDiv;
+  const wrap=s=>st.allBelow?"（"+s+"）":s;
+  const meanD=wrap(fix1(st.mean)),sdD=st.sd==null?wrap("※"):wrap(fix1(st.sd));
+  const r=$("resultArea");
+  r.innerHTML='<h2>測定結果（騒音）</h2>'+
+    '<div class="ecard">区分の基準：85dB 未満 → 第Ⅰ／85dB 以上 90dB 未満 → 第Ⅱ／90dB 以上 → 第Ⅲ。'+
+    (st.allBelow?'<br><b>全データが80dB未満</b>のため全データで算出し、平均・標準偏差を「（ ）」付きで表示しています。':'80dB以上の測定値のみで算出しています。')+'</div>'+
+    '<table class="rtable">'+
+    `<tr><td class="lbl">A測定 算術平均</td><td class="val">${meanD} dB</td></tr>`+
+    `<tr><td class="lbl">A測定 標準偏差</td><td class="val">${sdD}</td></tr>`+
+    `<tr><td class="lbl">算定に使用したデータ個数</td><td class="val">${st.n} 個</td></tr>`+
+    `<tr><td class="lbl">B測定値（最大値）</td><td class="val">${bDisp}</td></tr>`+
+    `<tr><td class="lbl">A測定区分</td><td><span class="opt on d${aDiv}">第${ROMAN[aDiv]}</span></td></tr>`+
+    `<tr><td class="lbl">B測定区分</td><td>${hasB?`<span class="opt on d${bDiv}">第${ROMAN[bDiv]}</span>`:'<span class="small">—（B測定なし）</span>'}</td></tr>`+
+    `<tr><td class="lbl">管理区分</td><td><span class="badge d${kanri}">第${ROMAN[kanri]}管理区分</span></td></tr>`+
+    '</table>';
+  r.hidden=false;
+  const gg=noiseGraph(st.mean,hasB?bMax:null);
+  $("graphArea").innerHTML='<h2>グラフ</h2><div class="gblock"><h3>等価騒音レベル (dB)</h3>'+gg.svg+gg.notes+'</div>';
+  $("graphArea").hidden=false;
+  r.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+/* ===== グラフ：化学A（境界曲線＋プロット） ===== */
+function chemAGraph(M1,sigma1,E){
+  const x0=70,x1=590,yt=40,yb=360,xmax=1.3,ymin=1.0,ymax=4.0;
+  const X=v=>x0+(v/xmax)*(x1-x0),Y=s=>yb-((s-ymin)/(ymax-ymin))*(yb-yt);
+  let p1="",p2="";
+  for(let s=ymin;s<=ymax+1e-9;s+=0.05){
+    const ls=Math.log10(s);
+    const me1=Math.pow(10,-1.645*Math.sqrt(ls*ls+0.084));
+    const me2=Math.pow(10,-1.151*(ls*ls+0.084));
+    p1+=X(Math.min(me1,xmax)).toFixed(1)+","+Y(s).toFixed(1)+" ";
+    p2+=X(Math.min(me2,xmax)).toFixed(1)+","+Y(s).toFixed(1)+" ";
+  }
+  const me=M1/E;let px=me,py=sigma1,notes=[];
+  if(me>xmax){px=xmax;notes.push("M₁/Eが1.3を超えています。");}
+  if(me<0){px=0;}
+  if(sigma1>ymax){py=ymax;notes.push("σ₁が4.0を超えています。");}
+  if(sigma1<ymin){py=ymin;}
+  if(notes.length)notes.push("プロットはグラフ範囲の境界上に表示しています。");
+  const cx=X(px),cy=Y(py);
+  let grid="";
+  [0.2,0.4,0.6,0.8,1.0,1.2].forEach(v=>grid+=line(X(v),yt,X(v),yb,"#e3e2da",.5));
+  [1.5,2.0,2.5,3.0,3.5].forEach(s=>grid+=line(x0,Y(s),x1,Y(s),"#e3e2da",.5));
+  const ax=line(x0,yt,x0,yb,"#8a897f",1)+line(x0,yb,x1,yb,"#8a897f",1);
+  let xt="";["0|0","0.2|0.2","0.4|0.4","0.6|0.6","0.8|0.8","1.0|1.0","1.2|1.2"].forEach(t=>{const a=t.split("|");xt+=txt(X(+a[0]),378,a[1],"#555",11,"middle");});
+  let yl="";[["1.0",1],["1.5",1.5],["2.0",2],["2.5",2.5],["3.0",3],["3.5",3.5],["4.0",4]].forEach(t=>{yl+=txt(64,Y(t[1])+4,t[0],"#555",11,"end");});
+  const svg=`<svg viewBox="0 0 620 412" width="100%" role="img" aria-label="A測定の管理区分グラフ。縦軸σ1、横軸M1/E。プロットは(${sig(me)}, ${sig(sigma1)})。">`+
+    grid+
+    txt(130,343,"区分Ⅰ","#9b9a90",14,"start")+txt(262,324,"区分Ⅱ","#9b9a90",14,"start")+txt(452,254,"区分Ⅲ","#9b9a90",14,"start")+
+    `<polyline points="${p1}" fill="none" stroke="#1565c0" stroke-width="2"/>`+
+    `<polyline points="${p2}" fill="none" stroke="#d4541f" stroke-width="2"/>`+
+    ax+xt+yl+
+    `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="#00897b"/>`+
+    txt(330,398,"M₁/E","#333",13,"middle")+
+    `<text x="22" y="200" transform="rotate(-90 22 200)" text-anchor="middle" font-size="13" fill="#333">σ₁（幾何標準偏差）</text>`+
+    line(70,402,92,402,"#1565c0",2)+txt(98,406,"第1管理水準（区分Ⅰ/Ⅱ境界）","#555",12,"start")+
+    line(340,402,362,402,"#d4541f",2)+txt(368,406,"第2管理水準（区分Ⅱ/Ⅲ境界）","#555",12,"start")+
+    `</svg>`;
+  return {svg,notes:notes.map(n=>`<p class="gnote">${n}</p>`).join("")};
+}
+/* ===== グラフ：化学B（横軸 CB/E） ===== */
+function chemBGraph(CB,E){
+  const x0=60,x1=580,ay=68,xmax=3.5;
+  const X=v=>x0+(v/xmax)*(x1-x0);
+  const valv=CB/E;let px=valv,notes=[];
+  if(valv>xmax){px=xmax;notes.push("C<sub>B</sub>/Eが3.5を超えています。プロットは境界上に表示しています。");}
+  let ticks="";[0,0.5,1.0,1.5,2.0,2.5,3.0,3.5].forEach(v=>{ticks+=line(X(v),ay-5,X(v),ay+5,"#8a897f",1)+txt(X(v),ay+22,v.toFixed(1),"#555",11,"middle");});
+  const svg=`<svg viewBox="0 0 620 118" width="100%" role="img" aria-label="B測定グラフ。横軸CB/E。プロットは${num2(valv)}。">`+
+    line(x0,ay,x1,ay,"#8a897f",1.2)+
+    line(X(1.0),ay-18,X(1.0),ay+8,"#1565c0",1.5)+txt(X(1.0),ay-24,"第1管理水準","#1565c0",11,"middle")+
+    line(X(1.5),ay-38,X(1.5),ay+8,"#d4541f",1.5)+txt(X(1.5),ay-44,"第2管理水準","#d4541f",11,"middle")+
+    txt((X(0)+X(1.0))/2,ay+40,"区分Ⅰ","#9b9a90",12,"middle")+txt((X(1.0)+X(1.5))/2,ay+40,"区分Ⅱ","#9b9a90",12,"middle")+txt((X(1.5)+X(3.5))/2,ay+40,"区分Ⅲ","#9b9a90",12,"middle")+
+    ticks+
+    `<circle cx="${X(px).toFixed(1)}" cy="${ay}" r="6" fill="#00897b"/>`+
+    `</svg>`+
+    `<div class="glegend"><span class="lg"><span style="width:11px;height:11px;border-radius:50%;background:#00897b;display:inline-block"></span>C_B/E = ${num2(valv)}</span></div>`;
+  return {svg,notes:notes.map(n=>`<p class="gnote">${n}</p>`).join("")};
+}
+/* ===== グラフ：騒音（横軸 dB） ===== */
+function noiseGraph(aMean,bMax){
+  const x0=60,x1=580,ay=78,lo=80,hi=115;
+  const X=v=>x0+((v-lo)/(hi-lo))*(x1-x0);
+  let notes=[];
+  let apx=aMean;if(aMean<lo){apx=lo;notes.push("A測定平均値が80dB未満です。プロットは境界（80dB）上に表示しています。");}if(aMean>hi){apx=hi;notes.push("A測定平均値が115dBを超えています。");}
+  let bpx=null;if(bMax!=null){bpx=bMax;if(bMax<lo){bpx=lo;notes.push("B測定値が80dB未満です。");}if(bMax>hi){bpx=hi;notes.push("B測定値が115dBを超えています。");}}
+  let ticks="";[80,85,90,95,100,105,110,115].forEach(v=>{ticks+=line(X(v),ay-5,X(v),ay+5,"#8a897f",1)+txt(X(v),ay+22,String(v),"#555",11,"middle");});
+  let marks=`<circle cx="${X(apx).toFixed(1)}" cy="${ay}" r="6" fill="#1565c0"/>`;
+  if(bpx!=null)marks+=`<path d="M ${X(bpx).toFixed(1)} ${ay-7} L ${(X(bpx)-7).toFixed(1)} ${ay+6} L ${(X(bpx)+7).toFixed(1)} ${ay+6} Z" fill="#d4541f"/>`;
+  const svg=`<svg viewBox="0 0 620 128" width="100%" role="img" aria-label="騒音グラフ。横軸80-115dB。A平均${fix1(aMean)}${bMax!=null?"、B最大"+fix1(bMax):""}。">`+
+    line(x0,ay,x1,ay,"#8a897f",1.2)+
+    line(X(85),ay-18,X(85),ay+8,"#9a6b00",1.5)+txt(X(85),ay-24,"85dB","#9a6b00",11,"middle")+
+    line(X(90),ay-38,X(90),ay+8,"#bf2e2e",1.5)+txt(X(90),ay-44,"90dB","#bf2e2e",11,"middle")+
+    txt((X(80)+X(85))/2,ay+40,"第Ⅰ","#9b9a90",12,"middle")+txt((X(85)+X(90))/2,ay+40,"第Ⅱ","#9b9a90",12,"middle")+txt((X(90)+X(115))/2,ay+40,"第Ⅲ","#9b9a90",12,"middle")+
+    ticks+marks+`</svg>`+
+    `<div class="glegend"><span class="lg"><span style="width:11px;height:11px;border-radius:50%;background:#1565c0;display:inline-block"></span>A測定平均値 = ${fix1(aMean)} dB</span>`+
+    (bMax!=null?`<span class="lg"><span style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:11px solid #d4541f;display:inline-block"></span>B測定値 = ${fix1(bMax)} dB</span>`:"")+`</div>`;
+  return {svg,notes:notes.map(n=>`<p class="gnote">${n}</p>`).join("")};
+}
+function line(x1,y1,x2,y2,c,w){return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="${w}"/>`;}
+function txt(x,y,t,c,s,anc){return `<text x="${x}" y="${y}" text-anchor="${anc}" font-size="${s}" fill="${c}" font-family="sans-serif">${t}</text>`;}
+
+/* ===== 初期化 ===== */
+function setCat(c){
+  cat=c;override=false;comps=[null];
+  document.querySelectorAll(".cat").forEach(b=>b.classList.toggle("active",b.dataset.cat===c));
+  renderHeader();renderGrid();
+}
+document.querySelectorAll(".cat").forEach(b=>b.addEventListener("click",()=>setCat(b.dataset.cat)));
+$("applyBtn").addEventListener("click",renderGrid);
+$("judgeBtn").addEventListener("click",judge);
+$("gridArea").addEventListener("input",updateDerived);
+$("aCount").addEventListener("change",renderGrid);
+$("bCount").addEventListener("change",renderGrid);
+setCat("dust");
+</script>
+</body>
+</html>
