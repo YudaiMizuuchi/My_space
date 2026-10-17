@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://aoi-s-office.jp/sitemap.xml
+Sitemap: https://aoi-s-office.jp/sokuteishi/sitemap.xml
